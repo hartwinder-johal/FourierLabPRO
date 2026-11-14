@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fourier Lab PRO — Release Candidate 1</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Fourier <span style="color:var(--cyan)">Lab</span> <small style="font-size:.45em;color:var(--violet);font-weight:600;vertical-align:middle;border:1px solid #a78bfa55;padding:3px 8px;border-radius:99px">PRO FFT RC1</small></h1>
+      <p class="sub">Radix-4 FFT.js engine with offline Radix-2 fallback · 2-Opt TSP stroke ordering & sub-stepped tracing.</p>
+    </div>
+    <div class="pill-group">
+      <div class="pill" id="fftBadge">FFT ENGINE CHECKING · N=1024</div>
+      <div class="pill" style="border-color:#5b3d8a;color:#d8b4fe">2-OPT TSP PATHING</div>
+      <button id="aboutOpen" type="button" class="secondary" style="padding:7px 12px">About</button>
+    </div>
+  </header>
+
+  <section class="layout">
+    <!-- Left Column: Interactive Stage -->
+    <div class="stage">
+      <div class="canvas-wrap">
+        <canvas id="view" aria-label="Animated Fourier epicycles"></canvas>
+        <div class="hud-overlay">
+          <div class="hud-tag">Harmonics: <strong id="hudTerms">120 / 1024</strong></div>
+          <div class="hud-tag">Strokes: <strong id="hudStrokes">1</strong></div>
+          <div class="hud-tag">Cycle: <strong id="hudCycle">0%</strong></div>
+        </div>
+      </div>
+
+      <!-- Scrubbing Timeline -->
+      <div class="timeline-bar">
+        <label id="timeLabel">T = 0.0%</label>
+        <input id="scrubber" class="timeline-slider" type="range" min="0" max="1" step="0.0005" value="0" title="Scrub through Fourier cycle [0, 2π]">
+      </div>
+
+      <div class="legend">
+        <div class="legend-items">
+          <span><i class="dot" style="background:#53e5ff"></i>Epicycle chain</span>
+          <span><i class="dot" style="background:#ff6fae"></i>Reconstructed ink</span>
+          <span><i class="dot" style="background:#64748b"></i>Pen-up bridge</span>
+          <span><i class="dot" style="background:#a78bfa"></i>Tip vector</span>
+        </div>
+        <span style="font-size:11px;color:#64748b">Scroll/Drag scrubber to inspect corners</span>
+      </div>
+    </div>
+
+    <!-- Right Column: Controls & Inspector -->
+    <aside class="panel">
+      <h2>
+        <span>Source & Extraction</span>
+        <span class="value" id="activeSourceBadge">Preset</span>
+      </h2>
+
+      <div class="control">
+        <div class="labelrow"><label for="source">Input mode</label></div>
+        <select id="source">
+          <option value="preset">Mathematical / Vector Preset</option>
+          <option value="image">Draw Pattern / Image Upload</option>
+          <option value="text">Typography & Multi-Letter Text</option>
+        </select>
+      </div>
+
+      <!-- 1. PRESET BOX -->
+      <div id="presetBox" class="section">
+        <div class="control">
+          <div class="labelrow"><label for="curveFamily">Curve library</label><span class="value">Fractal · Generative · Design</span></div>
+          <select id="curveFamily">
+            <option value="classic">Classic Fourier presets</option>
+            <option value="fractal">Fractal curves</option>
+            <option value="generative">Generative art</option>
+            <option value="design">Parametric design curves</option>
+          </select>
+        </div>
+        <div class="control" id="classicCurveControl">
+          <div class="labelrow"><label for="shape">Classic preset curve</label></div>
+          <select id="shape">
+            <option value="heart">Parametric Heart</option>
+            <option value="treble">Treble Clef (Multi-Loop)</option>
+            <option value="infinity">Lemniscate of Bernoulli (∞)</option>
+            <option value="butterfly">Fay's Butterfly Curve</option>
+            <option value="star">Sharp 5-Point Star</option>
+            <option value="flower">Rhodonea Rose Curve</option>
+            <option value="square">Sharp Square (Gibbs Test)</option>
+            <option value="spiral">Archimedean Spiral Loop</option>
+          </select>
+        </div>
+        <div class="control hidden" id="advancedCurveControl">
+          <div class="labelrow"><label for="curvePattern">Pattern / curve</label><span class="value" id="curveFamilyHint">Recursive geometry</span></div>
+          <select id="curvePattern"></select>
+        </div>
+        <div class="tip" id="curveLibraryTip">Choose a curve family to explore recursive fractals, generative compositions and practical parametric profiles. Every selection is converted into a sampled path for the Fourier engine.</div>
+      </div>
+
+      <div class="section" id="threeDBox">
+        <div class="control">
+          <div class="labelrow"><label for="threeDMode">3D curve view</label><span class="value">Depth projection</span></div>
+          <select id="threeDMode">
+            <option value="off">2D Fourier view</option>
+            <option value="helix">3D · Helix</option>
+            <option value="torus">3D · Torus knot</option>
+            <option value="wave">3D · Depth wave</option>
+            <option value="fold">3D · Folded / layered</option>
+          </select>
+        </div>
+        <div class="control">
+          <div class="labelrow"><label for="threeDYaw">3D rotation · horizontal</label><span class="value" id="threeDYawOut">35°</span></div>
+          <input id="threeDYaw" type="range" min="-180" max="180" value="35" step="1">
+        </div>
+        <div class="control">
+          <div class="labelrow"><label for="threeDPitch">3D rotation · vertical</label><span class="value" id="threeDPitchOut">25°</span></div>
+          <input id="threeDPitch" type="range" min="-85" max="85" value="25" step="1">
+        </div>
+        <div class="control">
+          <div class="labelrow"><label for="threeDDepth">Depth strength</label><span class="value" id="threeDDepthOut">75%</span></div>
+          <input id="threeDDepth" type="range" min="0" max="180" value="75" step="1">
+        </div>
+        <div class="row-2">
+          <button id="threeDReset" type="button" class="secondary">Reset 3D camera</button>
+        </div>
+        <div class="tip">Powered by Three.js WebGL. Drag to orbit, scroll or pinch to zoom. The 3D scene retains the Fourier epicycle chain: tilted 3D wheel ellipses, connecting vectors and moving tip. The 2D renderer remains available in the same app.</div>
+      </div>
+
+      <!-- 2. SIGNATURE PAD & IMAGE UPLOAD BOX -->
+      <div id="imageBox" class="section hidden">
+        <div class="control">
+          <div class="labelrow">
+            <label>Draw Your Pattern</label><span class="value">Touch / mouse / stylus</span>
+            <span class="value" id="padStrokeCount">0 strokes</span>
+          </div>
+          <div class="pad-wrap">
+            <canvas id="signPad" width="720" height="240"></canvas>
+            <span class="pad-badge">Draw with finger, mouse or stylus</span>
+          <div class="tip" style="margin-top:7px">Draw one or more strokes. Use <b>Vector Path</b> for faithful stroke tracking, or <b>Raster Skeletonize</b> to extract a centerline from the ink. Then select <b>Generate Fourier from Drawing</b> to animate the epicycles around your pattern.</div>
+          </div>
+          <div class="row-2" style="margin-top:8px">
+            <div>
+              <div class="labelrow"><label for="padMode">Pad capture mode</label></div>
+              <select id="padMode">
+                <option value="vector">Vector Path (recommended)</option>
+                <option value="raster">Raster Skeletonize</option>
+              </select>
+            </div>
+            <div>
+              <div class="labelrow"><label for="undoPad">Edit</label></div>
+              <div style="display:flex;gap:5px">
+                <button class="btn" id="undoPad" type="button" title="Undo last stroke">↶ Undo</button>
+                <button class="btn" id="clearPad" type="button">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="usePad" type="button">✦ Generate Fourier from Drawing</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="control">
+            <div class="labelrow"><label for="imageFile">Or Upload Signature / Image (Hi-Res)</label></div>
+            <input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+          </div>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="extractMode">Extraction algorithm</label></div>
+              <select id="extractMode">
+                <option value="skeleton">Centerline Skeleton (Thin)</option>
+                <option value="contour">Marching Squares (Outline)</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="invert">Ink polarity</label></div>
+              <select id="invert">
+                <option value="auto">Auto-Detect Polarity</option>
+                <option value="dark" selected>Dark Ink on Light</option>
+                <option value="light">Light Ink on Dark</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="threshMode">Thresholding</label></div>
+              <select id="threshMode">
+                <option value="adaptive" selected>Adaptive Local (Shadows)</option>
+                <option value="manual">Manual Global Slider</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="morphHeal">Stroke Healing</label><output class="value" id="morphOut">1 px</output></div>
+              <input id="morphHeal" type="range" min="0" max="3" value="1">
+            </div>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="threshold">Ink sensitivity / threshold</label><output class="value" id="thresholdOut">145</output></div>
+            <input id="threshold" type="range" min="15" max="245" value="145">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="spurPrune">Skeleton spur pruning</label><output class="value" id="spurOut">6 px</output></div>
+            <input id="spurPrune" type="range" min="0" max="20" value="6">
+          </div>
+          <div class="inspector-wrap" style="margin:0 0 10px">
+            <div class="inspector-head">
+              <span>LIVE DETECTED INK MASK &amp; SKELETON</span>
+              <span id="maskPixelCount" style="color:var(--emerald)">Ready</span>
+            </div>
+            <canvas id="maskPreviewCanvas" width="320" height="96"></canvas>
+          </div>
+          <button class="btn primary" id="processImage" type="button" style="width:100%">Process Uploaded Image into FFT</button>
+          <div class="status" id="imageStatus">Draw on the pad above or upload a signature image.</div>
+        </div>
+      </div>
+
+      <!-- 3. TEXT BOX -->
+      <div id="textBox" class="section hidden">
+        <div class="control">
+          <div class="labelrow"><label for="textInput">Text string</label><span class="value">2-Opt Auto-Linked</span></div>
+          <textarea id="textInput" maxlength="28">FOURIER</textarea>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="font">Typeface</label></div>
+            <select id="font">
+              <option value="Georgia">Georgia (Serif)</option>
+              <option value="Arial">Arial (Sans)</option>
+              <option value=" cursive">Script / Cursive</option>
+              <option value="Impact">Impact (Heavy)</option>
+              <option value="monospace">Monospace</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="textExtractMode">Tracing style</label></div>
+            <select id="textExtractMode">
+              <option value="contour">Crisp Dual Outline</option>
+              <option value="skeleton">Single-Line Center</option>
+            </select>
+          </div>
+        </div>
+        <div class="control">
+          <div class="labelrow"><label for="fontWeight">Font weight</label></div>
+          <select id="fontWeight">
+            <option value="700">Bold (700)</option>
+            <option value="400">Regular (400)</option>
+            <option value="900">Black (900)</option>
+          </select>
+        </div>
+        <button class="btn primary" id="makeText" type="button" style="width:100%">Convert Text into FFT</button>
+        <div class="status" id="textStatus">Ready to trace typography.</div>
+      </div>
+
+      <!-- PATH PREVIEW / INSPECTOR -->
+      <div class="inspector-wrap">
+        <div class="inspector-head">
+          <span>EXTRACTED PATH &amp; 2-OPT TOUR INSPECTOR</span>
+          <span id="inspectorInfo" style="color:var(--cyan)">1024 pts</span>
+        </div>
+        <canvas id="inspectorCanvas" width="320" height="110"></canvas>
+      </div>
+
+
+      <!-- 4. TRACKING QUALITY & SIGNAL PLOTTER -->
+      <div class="section">
+        <h2><span>Tracking & Signal Plotter</span><span class="value" id="trackHealth">Ready</span></h2>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="minComponent">Noise blob filter</label><output class="value" id="minComponentOut">8 px</output></div>
+            <input id="minComponent" type="range" min="0" max="80" value="8" step="1">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="trackWindow">Trace history</label><output class="value" id="trackWindowOut">1024 pts</output></div>
+            <input id="trackWindow" type="range" min="128" max="4096" value="1024" step="128">
+          </div>
+        </div>
+        <div class="check-grid">
+          <label class="check-pill"><input id="showTracker" type="checkbox" checked><span>Tracking cursor</span></label>
+          <label class="check-pill"><input id="showTrackGrid" type="checkbox" checked><span>Plot grid</span></label>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="plotMode">Live plot</label></div>
+            <select id="plotMode">
+              <option value="spectrum">Amplitude spectrum</option>
+              <option value="xy">X / Y waveform</option>
+              <option value="phase">Harmonic phase</option>
+              <option value="tracking">Tracking error & bridges</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label>Path quality</label></div>
+            <div class="stat" style="padding:7px 9px"><small>BRIDGE SHARE · SAMPLE SPACING</small><strong id="trackMetrics">—</strong></div>
+          </div>
+        </div>
+        <canvas id="plotCanvas" width="640" height="190" style="display:block;width:100%;height:150px;background:#070d19;border:1px solid #243249;border-radius:9px"></canvas>
+        <div class="tip" id="plotCaption">Amplitude spectrum: strongest Fourier harmonics, sorted by magnitude.</div>
+      </div>
+
+
+      <!-- FOURIER EQUATION EXPORT -->
+      <div class="section">
+        <h2><span>Fourier Equation Export</span><span class="value" id="equationStatus">Waiting for pattern</span></h2>
+        <div class="tip">Shows the path as readable x(t), y(t) wave equations (like a sum of sine/cosine terms), with technical complex-series and data exports available too.</div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="equationTerms">Equation terms</label><output class="value" id="equationTermsOut">140</output></div>
+            <input id="equationTerms" type="range" min="1" max="1024" value="140">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="equationFormat">Output format</label></div>
+            <select id="equationFormat">
+              <option value="readable" selected>Readable harmonic equations (recommended)</option>
+              <option value="complex">Complex Fourier series (technical)</option>
+              <option value="parametric">Parametric X(t), Y(t) expanded</option>
+              <option value="json">JSON coefficient data</option>
+            </select>
+          </div>
+        </div>
+        <textarea id="equationOutput" rows="6" readonly spellcheck="false" style="width:100%;resize:vertical;background:#070d19;color:#d8e7ff;border:1px solid #30415b;border-radius:9px;padding:10px;font:12px/1.5 ui-monospace,monospace" placeholder="Load or draw a pattern to generate its equation…"></textarea>
+        <div class="button-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button id="copyEquation" type="button">Copy equation</button>
+          <button id="copyDesmos" type="button">Copy Desmos Parametric</button>
+          <button id="downloadEquation" type="button">Download equation</button>
+          <button id="downloadCoefficients" type="button">Export coefficient CSV</button>
+        </div>
+        <div class="tip" style="margin-top:7px">Desmos: copy the parametric expression, open Desmos Graphing Calculator, paste it into an expression line. Uses the active harmonics and current graph rotation.</div>
+      </div>
+
+      <!-- PATTERN WAVETABLE SYNTHESIZER -->
+      <div class="section">
+        <h2><span>Pattern Sound Generator</span><span class="value" id="audioStatus">Audio stopped</span></h2>
+        <div class="tip">The drawn path controls the sound in real time. Choose a preset to get started, then fine-tune the controls.</div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="audioPreset">Sound preset</label></div>
+            <select id="audioPreset">
+              <option value="custom">Custom settings</option><option value="ambient">Soft Ambient</option>
+              <option value="glass">Glass Motion</option><option value="drone">Deep Drone</option>
+              <option value="pulse">Pulsing Sequence</option><option value="lead">Bright Lead</option>
+              <option value="organic">Organic Flow</option>
+            </select>
+          </div>
+          <div class="control" style="justify-content:end">
+            <div class="labelrow"><label for="applyAudioPreset">Apply preset</label></div>
+            <button id="applyAudioPreset" type="button">Apply Sound Preset</button>
+            <small style="display:block;color:var(--muted);margin-top:5px">Select a sound, then tap Apply.</small>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="audioWaveSource">Waveform from pattern</label></div>
+            <select id="audioWaveSource">
+              <option value="x">X coordinate</option><option value="y">Y coordinate</option>
+              <option value="angle">Polar angle</option><option value="radius">Radius</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="audioFrequency">Base pitch</label><output class="value" id="audioFrequencyOut">220 Hz</output></div>
+            <input id="audioFrequency" type="range" min="55" max="880" value="220" step="1">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="audioPatternDepth">Pattern pitch influence</label><output class="value" id="audioPatternDepthOut">70%</output></div>
+            <input id="audioPatternDepth" type="range" min="0" max="100" value="70" step="1">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="audioLfoRate">LFO rate</label><output class="value" id="audioLfoRateOut">0.80 Hz</output></div>
+            <input id="audioLfoRate" type="range" min="0.05" max="12" value="0.8" step="0.05">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="audioLfoDepth">LFO depth</label><output class="value" id="audioLfoDepthOut">35%</output></div>
+            <input id="audioLfoDepth" type="range" min="0" max="95" value="35" step="1">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="audioLfoMode">LFO destination</label></div>
+            <select id="audioLfoMode">
+              <option value="both">Pitch + volume</option><option value="pitch">Pitch only</option><option value="amp">Volume only</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="audioVolume">Output level</label><output class="value" id="audioVolumeOut">22%</output></div>
+            <input id="audioVolume" type="range" min="0" max="60" value="22" step="1">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="audioFilter">Tone filter</label><output class="value" id="audioFilterOut">12 kHz</output></div>
+            <input id="audioFilter" type="range" min="500" max="18000" value="12000" step="100">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="audioStereo">Stereo width</label><output class="value" id="audioStereoOut">35%</output></div>
+            <input id="audioStereo" type="range" min="0" max="100" value="35" step="1">
+          </div>
+        </div>
+        <div class="button-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button id="startAudio" type="button">▶ Start Audio</button>
+          <button id="stopAudio" type="button" disabled>■ Stop Audio</button>
+          <button id="refreshAudioWave" type="button">↻ Rebuild Wavetable</button>
+        </div>
+        <div class="tip" id="audioHint">Try X or Y for a direct waveform, then adjust LFO rate/depth and filter. Start with a low output level.</div>
+        <div class="control" style="margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:10px">
+          <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+            <input id="rememberAudioSettings" type="checkbox" style="width:auto;accent-color:var(--cyan)">
+            <span><strong>Remember sound settings in this browser</strong><small style="display:block;color:var(--muted);margin-top:3px">Opt in to save sound controls and the selected preset on this device.</small></span>
+          </label>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap">
+            <span id="audioStorageStatus" class="value">Browser saving is off</span>
+            <button id="clearAudioSettings" type="button" class="secondary">Clear saved settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. FFT & HARMONIC CONTROLS -->
+      <div class="section">
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="fftSize">FFT Sample Size (N)</label></div>
+            <select id="fftSize">
+              <option value="16">16 (Preview)</option>
+              <option value="32">32</option>
+              <option value="64">64</option>
+              <option value="128">128</option>
+              <option value="256">256</option>
+              <option value="512">512 (Fast)</option>
+              <option value="1024" selected>1024 (High-Res)</option>
+              <option value="2048">2048 (Ultra-Precise)</option>
+              <option value="4096">4096 (Maximum detail)</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="smoothPasses">Jitter Smoothing</label><output class="value" id="smoothOut">1 pass</output></div>
+            <input id="smoothPasses" type="range" min="0" max="6" value="1">
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="labelrow"><label for="terms">Active Epicycles (Harmonics)</label><output class="value" id="termsOut">140</output></div>
+          <input id="terms" type="range" min="1" max="1024" value="140">
+        </div>
+
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="speed">Cycle Speed</label><output class="value" id="speedOut">1.0×</output></div>
+            <input id="speed" type="range" min="0.1" max="2.5" value="1.0" step="0.1">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="scale">Zoom Scale</label><output class="value" id="scaleOut">100%</output></div>
+            <input id="scale" type="range" min="45" max="165" value="100">
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="orientation">Graph Orientation</label><output class="value" id="orientationOut">0°</output></div>
+            <input id="orientation" type="range" min="0" max="359" value="0" step="1">
+          </div>
+        </div>
+
+        <div class="gear-row">
+          <div>
+            <div class="labelrow" style="margin:0"><label for="gearCircles">Epicycle Gear Rings</label></div>
+            <div class="tip">Show rotating harmonic gears &amp; spokes</div>
+          </div>
+          <label class="gear-switch" title="Toggle epicycle rings">
+            <input id="gearCircles" type="checkbox" checked>
+            <span class="gear-knob"><span>⚙</span></span>
+          </label>
+        </div>
+
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="gearStyle">Epicycle Visual Style</label></div>
+            <select id="gearStyle">
+              <option value="gears" selected>Mechanical Gear Teeth</option>
+              <option value="satellites">Orbital Nodes &amp; Spokes</option>
+              <option value="classic">Classic Minimal Rings</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="circleOpacity">Gear Opacity</label><output class="value" id="circleOpacityOut">75%</output></div>
+            <input id="circleOpacity" type="range" min="10" max="100" value="75">
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="control">
+            <div class="labelrow"><label for="wallpaperStyle">Animated Wallpaper Background</label></div>
+            <select id="wallpaperStyle">
+              <option value="aurora" selected>Aurora Borealis</option>
+              <option value="nebula">Deep Space Nebula</option>
+              <option value="stars">Starfield Drift</option>
+              <option value="synthwave">Synthwave Horizon</option>
+              <option value="ocean">Deep Ocean</option>
+              <option value="matrix">Digital Matrix</option>
+              <option value="sunset">Cinematic Sunset</option>
+              <option value="minimal">Minimal Gradient</option>
+              <option value="black">Pure Black</option>
+            </select>
+          </div>
+          <div class="control">
+            <div class="labelrow"><label for="wallpaperStrength">Wallpaper Intensity</label><output class="value" id="wallpaperStrengthOut">75%</output></div>
+            <input id="wallpaperStrength" type="range" min="0" max="100" value="75">
+          </div>
+        </div>
+        <div class="tip" style="margin:5px 0 10px">Animated, procedural wallpaper-style backgrounds. They move with the Fourier cycle and are included in video and HTML exports.</div>
+
+        <div class="check-grid">
+          <label class="check-pill"><input id="rainbowTrace" type="checkbox" checked><span>Rainbow spectrum ink</span></label>
+          <label class="check-pill"><input id="rainbowGears" type="checkbox"><span>Rainbow gear rings</span></label>
+          <label class="check-pill"><input id="ghostCircles" type="checkbox"><span>Ghost translucent gears</span></label>
+          <label class="check-pill"><input id="transparentBg" type="checkbox"><span>Transparent background</span></label>
+          <label class="check-pill"><input id="dimBridges" type="checkbox" checked><span>Dim pen-up jumps</span></label>
+          <label class="check-pill"><input id="showGhost" type="checkbox"><span>Ghost target path</span></label>
+          <label class="check-pill"><input id="cycleColors" type="checkbox" checked><span>Cycle repeat color</span></label>
+          <label class="check-pill"><input id="closeLoop" type="checkbox" checked><span>Smooth seam bridge</span></label>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="toggle" type="button">Ⅱ Pause</button>
+          <button class="btn" id="once" type="button">▷ 1-Cycle</button>
+          <button class="btn" id="reset" type="button">↺ Reset</button>
+          <button class="btn" id="wash" type="button">✦ Clear Ink</button>
+        </div>
+
+        <!-- 5. BUILT-IN ANIMATED GIF EXPORT STUDIO -->
+        <div class="section">
+          <h2 style="margin-bottom:8px">
+            <span>🎞️ Animated GIF Export Studio</span>
+            <span class="value" id="gifStateBadge">GIF89a Encoder</span>
+          </h2>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="gifMode">Animation Layer</label></div>
+              <select id="gifMode">
+                <option value="pattern">Only Pattern Draw (No Gears)</option>
+                <option value="full" selected>Full Epicycles + Pattern</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="gifBg">GIF Background</label></div>
+              <select id="gifBg">
+                <option value="dark" selected>Dark Studio</option>
+                <option value="transparent">Transparent Alpha</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="gifRes">Resolution</label></div>
+              <select id="gifRes">
+                <option value="480x360">480 × 360 (Compact)</option>
+                <option value="640x480" selected>640 × 480 (HD Standard)</option>
+                <option value="512x512">512 × 512 (Square)</option>
+                <option value="800x600">800 × 600 (Large)</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="gifTiming">FPS &amp; Duration</label></div>
+              <select id="gifTiming">
+                <option value="20_4">20 FPS · 4 sec (80 frames)</option>
+                <option value="25_5" selected>25 FPS · 5 sec (125 frames)</option>
+                <option value="30_6">30 FPS · 6 sec (180 frames)</option>
+                <option value="15_3">15 FPS · 3 sec (45 frames)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn primary" id="exportGifBtn" type="button" style="width:100%">⬇ Render &amp; Download Animated GIF</button>
+          <div class="progress-wrap hidden" id="gifProgressWrap">
+            <div class="progress-bar" id="gifProgressBar"></div>
+          </div>
+          <div class="status" id="gifStatus">Exports 1 full cycle [0 → 2π] locally with LZW compression.</div>
+        </div>
+
+        <!-- HIGH RESOLUTION VIDEO + WINDOWS SCREENSAVER EXPORT -->
+        <div class="section" id="videoExportStudio">
+          <h2 style="margin-bottom:8px">
+            <span>🎬 Video &amp; Windows Screensaver</span>
+            <span class="value">1080p / 4K</span>
+          </h2>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="videoRes">Video Resolution</label></div>
+              <select id="videoRes">
+                <option value="1920x1080" selected>Full HD · 1920 × 1080</option>
+                <option value="3840x2160">4K UHD · 3840 × 2160</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="videoFps">Frame Rate</label></div>
+              <select id="videoFps">
+                <option value="30" selected>30 FPS</option>
+                <option value="60">60 FPS</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="control">
+              <div class="labelrow"><label for="videoSeconds">Loop Duration</label></div>
+              <select id="videoSeconds">
+                <option value="5">5 seconds</option>
+                <option value="10" selected>10 seconds</option>
+                <option value="15">15 seconds</option>
+                <option value="20">20 seconds</option>
+              </select>
+            </div>
+            <div class="control">
+              <div class="labelrow"><label for="videoLayer">Animation Layer</label></div>
+              <select id="videoLayer">
+                <option value="full" selected>Epicycles + Pattern</option>
+                <option value="pattern">Pattern only</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="exportVideoBtn" type="button" style="width:100%">⬇ Export MP4 / WebM Video</button>
+            <button class="btn" id="exportHtmlBtn" type="button" style="width:100%;margin-top:8px">⤓ Export Standalone Animated HTML</button>
+          </div>
+          <div class="status" id="htmlExportStatus">Exports a self-contained HTML animation with the current Fourier coefficients, orientation and harmonic count.</div>
+          <div class="progress-wrap hidden" id="videoProgressWrap">
+            <div class="progress-bar" id="videoProgressBar"></div>
+          </div>
+          <div class="status" id="videoStatus">Exports one seamless cycle at the selected resolution. MP4 is used when supported; otherwise WebM is exported.</div>
+          <div class="tip" style="margin-top:8px">4K at 60 FPS is demanding and may take several minutes. Keep this tab open while exporting.</div>
+          <div class="divider" style="margin:12px 0"></div>
+          <strong>Windows .SCR Screensaver</strong>
+          <div class="tip" style="margin:5px 0 9px">Download the Windows screensaver builder package. Build the .scr on a Windows PC; the package uses this HTML as its animation source.</div>
+          <a class="btn" href="fourier_windows_screensaver_builder.zip" download style="display:block;text-align:center;text-decoration:none">⬇ Windows Screensaver Builder (Source ZIP)</a>
+          <div class="tip" style="margin-top:7px">The generated .scr supports normal screensaver launch and configuration. Build instructions are included in the ZIP.</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><small>HARMONICS</small><strong id="statTerms">140</strong></div>
+          <div class="stat"><small>FFT SAMPLES</small><strong id="statSamples">1024</strong></div>
+          <div class="stat"><small>TRACE SEGMENTS</small><strong id="statPoints">0</strong></div>
+        </div>
+        <div class="note">
+          <strong>Cooley-Tukey $O(N \log N)$ FFT:</strong> Decomposes any 2D path $z(t) = x(t) + iy(t)$ into $N$ rotating complex phasors sorted by amplitude.
+        </div>
+      </div>
+    </aside>
+  </section>
+  <footer>HTML5 Fourier Studio · fft.js · Hand-drawn Paths · Epicycles · GIF + Full-HD/4K Video Export · Windows Screensaver Builder</footer>
+</main>
+
+  <div id="aboutDialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitle" hidden
+       style="position:fixed;inset:0;z-index:10000;background:rgba(2,6,16,.78);display:none;align-items:center;justify-content:center;padding:18px">
+    <div style="width:min(460px,100%);background:#101a2b;border:1px solid #354763;border-radius:16px;padding:22px;box-shadow:0 24px 80px #0009;color:#e7eefb">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <h2 id="aboutTitle" style="margin:0">About Fourier Lab PRO</h2>
+        <button id="aboutClose" type="button" aria-label="Close about window" class="secondary">✕</button>
+      </div>
+      <div style="margin:18px 0;padding:15px;border:1px solid #34445e;border-radius:12px;background:#0a1220">
+        <div style="font-size:1.25rem;font-weight:800;color:#53e5ff">JPSY Projects</div>
+        <div style="margin-top:7px;color:#aab9d0">Fourier Lab PRO · Interactive Fourier drawing, tracing and sound synthesis</div>
+        <div style="margin-top:14px"><span style="color:#8fa3bf">Developer</span><div style="font-size:1.1rem;font-weight:700;margin-top:3px">Harwinder</div></div>
+      </div>
+      <p style="color:#aab9d0;font-size:.9rem;line-height:1.5;margin-bottom:0">A creative signal laboratory for turning drawn paths into Fourier reconstructions, equations and synchronized sound.</p>
+    </div>
+  </div>
+<!-- fft.js 4.0.4: optimized radix-4/radix-2 complex FFT. The in-app radix-2 implementation remains as an offline fallback. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fft.js@4.0.4/dist/fft.js"></script>
+<script src="src/app.js"></script>
+
+</body>
+</html>
