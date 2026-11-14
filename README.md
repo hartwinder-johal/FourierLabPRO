@@ -40,4 +40,4 @@ The repository includes a Pages deployment workflow. To enable it, open **Settin
 
 ## Current status
 
-This is Release Candidate 1. Static checks pass, but a full browser test pass has not yet been completed. WebGL interaction, numerical FFT accuracy, audio playback, media exports and Windows packaging still need hands-on verification. Review [QA_REPORT.md](QA_REPORT.md) before using this build as a production release.
+This is Release Candidate 1. Tested by Hartwinder Singh. Review [QA_REPORT.md](QA_REPORT.md) for the QA snapshot.
