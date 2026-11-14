@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible problem in Fourier Lab PRO
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for helping improve Fourier Lab PRO. Please do not include passwords, private data or secrets."
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the steps needed to see the problem.
+      placeholder: "1. Open...\n2. Select...\n3. Observe..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: e.g. Chrome 130
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system / device
+      placeholder: e.g. Windows 11 desktop
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or console errors
+      description: Add relevant evidence if available.
+    validations:
+      required: false
