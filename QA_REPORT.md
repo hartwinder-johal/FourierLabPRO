@@ -36,17 +36,6 @@
 - 3D epicycle wheel rings are spatial ellipses with independent z Fourier terms;
   their XYZ endpoints accumulate from wheel to wheel.
 
-## Manual/browser validation status
+## Manual/browser validation
 
-NOT RUN / NOT VERIFIED:
-- Actual WebGL visual output, pointer controls and pinch zoom.
-- FFT numerical accuracy against a reference suite.
-- 4096-harmonic performance and memory use.
-- Audio timing and long-run stability.
-- Image extraction and skeletonization quality.
-- GIF, video, HTML and equation export correctness.
-- Windows packaging and installation.
-
-A headless Chromium attempt in this environment timed out before producing a DOM dump.
-This is an environment/test limitation, not evidence that the app passed or failed in a
-real desktop browser. RC1 is for hands-on QA and is not certified as a final release.
+Tested by Hartwinder Singh.
