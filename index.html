@@ -3,7 +3,276 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fourier Lab PRO — Release Candidate 1</title>
-<link rel="stylesheet" href="assets/app.css">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#080b14;
+  --panel:#111827;
+  --line:#263247;
+  --muted:#91a0b8;
+  --text:#eef4ff;
+  --cyan:#53e5ff;
+  --pink:#ff6fae;
+  --violet:#a78bfa;
+  --amber:#fbbf24;
+  --emerald:#34d399;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(ellipse at 50% -20%,#1a2850,transparent 55%),var(--bg);
+  color:var(--text);
+  font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+main{max-width:1320px;margin:auto;padding:20px 18px 34px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+h1{font-size:clamp(24px,3.5vw,36px);letter-spacing:-1.1px;margin:0}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.pill-group{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid #31516a;background:#0c1726;color:#a8efff;border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:600;letter-spacing:.3px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.stage,.panel{
+  background:linear-gradient(180deg,#111a2a,#0d1421);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:0 18px 55px #0006;
+}
+.stage{padding:12px;min-width:0;position:sticky;top:16px}
+.canvas-wrap{
+  position:relative;
+  width:100%;
+  aspect-ratio:1.42/1;
+  min-height:360px;
+  overflow:hidden;
+  border-radius:12px;
+  background:radial-gradient(ellipse at center,#101d31,#080d18 74%);
+  border:1px solid #1e293b;
+  transition:background .2s;
+}
+.canvas-wrap.checkerboard{
+  background-color:#0b101b;
+  background-image:
+    linear-gradient(45deg, #162032 25%, transparent 25%),
+    linear-gradient(-45deg, #162032 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #162032 75%),
+    linear-gradient(-45deg, transparent 75%, #162032 75%);
+  background-size:20px 20px;
+  background-position:0 0, 0 10px, 10px -10px, -10px 0;
+}
+canvas#view{display:block;width:100%;height:100%;position:relative;z-index:0;transition:opacity .18s}
+.three-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;display:none;touch-action:none;outline:none}
+.canvas-wrap.three-active #view{opacity:.14}
+.canvas-wrap.three-active .three-overlay{display:block}
+.hud-overlay{z-index:3}
+.hud-overlay{
+  position:absolute;
+  top:12px;
+  left:12px;
+  display:flex;
+  gap:8px;
+  pointer-events:none;
+  flex-wrap:wrap;
+}
+.hud-tag{
+  background:rgba(8,13,24,.78);
+  backdrop-filter:blur(6px);
+  border:1px solid rgba(83,229,255,.22);
+  border-radius:8px;
+  padding:4px 9px;
+  font-size:11px;
+  color:#cbd5e1;
+  font-variant-numeric:tabular-nums;
+}
+.hud-tag strong{color:var(--cyan)}
+.timeline-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 8px 4px;
+}
+.timeline-bar label{font-size:11.5px;color:var(--muted);min-width:52px;font-variant-numeric:tabular-nums}
+.timeline-slider{flex:1;accent-color:var(--pink);height:5px;cursor:pointer}
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:8px 8px 2px;
+  color:var(--muted);
+  font-size:12px;
+}
+.legend-items{display:flex;flex-wrap:wrap;gap:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.panel{padding:16px;max-height:calc(100vh - 40px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:#33445d transparent}
+.panel h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between}
+.section{border-top:1px solid var(--line);padding-top:13px;margin-top:13px}
+.section:first-of-type{border:0;padding:0;margin:0}
+.control{margin:0 0 12px}
+.labelrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;color:#dce7fa;font-size:12.5px;font-weight:500}
+.value{color:var(--cyan);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600}
+select,input[type=range],textarea{width:100%}
+select,textarea{
+  background:#09111e;
+  color:var(--text);
+  border:1px solid #33445d;
+  border-radius:9px;
+  padding:8px 10px;
+  font:inherit;
+  font-size:13px;
+  transition:border-color .15s;
+}
+select:focus,textarea:focus{outline:none;border-color:var(--cyan)}
+textarea{resize:vertical;min-height:58px}
+input[type=range]{accent-color:var(--cyan);cursor:pointer}
+input[type=file]{width:100%;font-size:11.5px;color:var(--muted)}
+input[type=file]::file-selector-button{
+  background:#1a2b42;
+  color:#dcecff;
+  border:1px solid #405573;
+  padding:6px 10px;
+  border-radius:7px;
+  margin-right:8px;
+  cursor:pointer;
+  font-size:11.5px;
+}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:flex;gap:7px;margin-top:10px}
+.btn{
+  border:1px solid #34445c;
+  background:#162236;
+  color:var(--text);
+  padding:8px 10px;
+  border-radius:9px;
+  cursor:pointer;
+  font-weight:600;
+  font-size:12.5px;
+  flex:1;
+  transition:.15s;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+.btn.primary{background:linear-gradient(100deg,#087f9c,#6251b5);border:1px solid #38bdf844}
+.btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.note{color:var(--muted);font-size:11.5px;margin-top:12px;line-height:1.4}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
+.stat{background:#09111e;border:1px solid #1f2d42;border-radius:9px;padding:8px 9px}
+.stat small{display:block;color:var(--muted);font-size:10px;letter-spacing:.4px}
+.stat strong{font-size:14.5px;font-variant-numeric:tabular-nums;color:#f1f5f9}
+.hidden{display:none!important}
+.status{
+  font-size:11.5px;
+  color:#a8efff;
+  margin-top:7px;
+  min-height:16px;
+  padding:6px 9px;
+  background:#091322;
+  border-left:3px solid var(--cyan);
+  border-radius:4px;
+}
+.tip{font-size:11px;color:var(--muted);margin-top:4px}
+footer{color:#71819b;font-size:12px;margin-top:16px;text-align:center}
+
+/* Signature pad & Inspector */
+.pad-wrap{position:relative;border-radius:9px;overflow:hidden;border:1px solid #52647e;background:#fff}
+canvas#signPad{display:block;width:100%;height:120px;touch-action:none;cursor:crosshair}
+.pad-badge{
+  position:absolute;
+  top:6px;
+  right:6px;
+  background:rgba(15,23,42,.75);
+  color:#e2e8f0;
+  font-size:10px;
+  padding:2px 7px;
+  border-radius:99px;
+  pointer-events:none;
+}
+.inspector-wrap{
+  margin-top:10px;
+  background:#070d19;
+  border:1px solid #243249;
+  border-radius:10px;
+  padding:8px;
+}
+.inspector-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+canvas#inspectorCanvas{
+  display:block;
+  width:100%;
+  height:110px;
+  background:#050811;
+  border-radius:6px;
+  border:1px solid #192336;
+}
+canvas#maskPreviewCanvas{
+  display:block;
+  width:100%;
+  height:96px;
+  background:#050811;
+  border-radius:6px;
+  border:1px solid #263854;
+  margin-top:6px;
+}
+.progress-wrap{
+  margin-top:8px;
+  background:#060b14;
+  border:1px solid #24344d;
+  border-radius:99px;
+  height:10px;
+  overflow:hidden;
+}
+.progress-bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--cyan),var(--pink),var(--amber));
+  transition:width .1s;
+}
+
+/* Toggle Switches & Gear */
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.check-pill{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  background:#0a1220;
+  border:1px solid #223047;
+  padding:6px 9px;
+  border-radius:8px;
+  font-size:11.5px;
+  color:#dce7fa;
+  cursor:pointer;
+  user-select:none;
+}
+.check-pill input{accent-color:var(--cyan);margin:0;cursor:pointer}
+.gear-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.gear-switch{width:46px;height:46px;display:grid;place-items:center;cursor:pointer;flex:none}
+.gear-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.gear-knob{
+  width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+  border:2px solid #43536d;background:#111b2c;
+  box-shadow:inset 0 0 0 3px #0a1220,0 0 0 1px #1b2a40;transition:.2s
+}
+.gear-knob span{font-size:21px;color:#71819b;transition:.25s}
+.gear-switch input:checked+.gear-knob{border-color:#38cde9;box-shadow:inset 0 0 0 3px #0a1220,0 0 16px #22d3ee55}
+.gear-switch input:checked+.gear-knob span{color:#53e5ff;transform:rotate(45deg)}
+
+@media(max-width:920px){
+  .layout{grid-template-columns:1fr}
+  .stage{position:static}
+  .panel{max-height:none;order:-1}
+  .canvas-wrap{aspect-ratio:1/1;min-height:290px}
+  .top{align-items:flex-start;flex-direction:column}
+}
+</style>
 </head>
 <body>
 <main>
@@ -659,7 +928,3492 @@
 <!-- fft.js 4.0.4: optimized radix-4/radix-2 complex FFT. The in-app radix-2 implementation remains as an offline fallback. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fft.js@4.0.4/dist/fft.js"></script>
-<script src="src/app.js"></script>
+<script>
+(() => {
+  window.addEventListener('error', event => {
+    const status = document.getElementById('imageStatus');
+    if (status && event.message) status.textContent = `Application error: ${event.message}`;
+  });
+  window.addEventListener('unhandledrejection', event => {
+    const status = document.getElementById('imageStatus');
+    const reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || 'Unknown rejection');
+    if (status) status.textContent = `Background task error: ${reason}`;
+  });
+
+  const $ = id => document.getElementById(id);
+  const canvas = $('view'), ctx = canvas.getContext('2d');
+  const inspector = $('inspectorCanvas'), ictx = inspector.getContext('2d');
+  const maskCanvas = $('maskPreviewCanvas'), mctx = maskCanvas.getContext('2d');
+  const TAU = 2 * Math.PI;
+
+  // Application State
+  let W = 0, H = 0, dpr = 1;
+  let N = 1024;
+  let coeff = [];
+  let rawStrokes = [];        // Array of stroke arrays: [[{x,y}, ...], ...]
+  let normalizedSamples = []; // N complex-plane samples {x, y, bridge}
+  let trace = [];             // Sub-stepped rendered points {x, y, bridge, t}
+  let time = 0, lastFrame = 0, paused = false, oneShot = false;
+  let repeatIndex = 0;
+  let imageBitmap = null;
+  let currentSourceMode = 'preset';
+
+  const repeatPalette = ['#ff6fae', '#53e5ff', '#a78bfa', '#fbbf24', '#34d399', '#fb7185', '#38bdf8'];
+
+  // ============================================================================
+  // 4. RASTER EXTRACTION PIPELINE: ADAPTIVE THRESHOLD, MORPHOLOGY & SKELETON
+  // ============================================================================
+
+  function createBinaryMask(offCanvas, threshold = 145, polarity = 'dark', threshMode = 'adaptive', morphHeal = 1, minComponent = 8) {
+    const c = offCanvas.getContext('2d', { willReadFrequently: true });
+    const w = offCanvas.width, h = offCanvas.height;
+    const data = c.getImageData(0, 0, w, h).data;
+    const lum = new Float32Array(w * h);
+
+    // 1. Alpha-aware luminance extraction: composite transparent pixels onto white (for dark ink) or black (for light ink)
+    let sumLum = 0, alphaCount = 0;
+    for (let i = 0; i < w * h; i++) {
+      const idx = i * 4;
+      const a = data[idx + 3] / 255;
+      if (a < 0.05) {
+        lum[i] = -1; // mark fully transparent
+      } else {
+        const bg = polarity === 'light' ? 0 : 255;
+        const r = data[idx] * a + bg * (1 - a);
+        const g = data[idx + 1] * a + bg * (1 - a);
+        const b = data[idx + 2] * a + bg * (1 - a);
+        const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        lum[i] = l;
+        sumLum += l;
+        alphaCount++;
+      }
+    }
+
+    // Check if image is purely alpha-channel ink (e.g. black or white signature on transparent PNG)
+    const totalPixels = w * h;
+    const transparentRatio = 1 - (alphaCount / totalPixels);
+
+    // Auto-detect polarity if requested
+    let useLightInk = (polarity === 'light');
+    if (polarity === 'auto') {
+      const meanBg = alphaCount > 0 ? sumLum / alphaCount : 255;
+      useLightInk = meanBg < 115;    }
+
+    // Fill transparent pixels with background luminance
+    const bgLum = useLightInk ? 0 : 255;
+    let minL = 255, maxL = 0;
+    for (let i = 0; i < totalPixels; i++) {
+      if (lum[i] < 0) lum[i] = bgLum;
+      if (lum[i] < minL) minL = lum[i];
+      if (lum[i] > maxL) maxL = lum[i];
+    }
+
+    // 2. Contrast stretch to [0..255] so faint gray signatures pop out
+    const range = maxL - minL;
+    if (range > 8 && range < 230) {
+      const invR = 255 / range;
+      for (let i = 0; i < totalPixels; i++) {
+        lum[i] = (lum[i] - minL) * invR;
+      }
+    }
+
+    const mask = new Uint8Array(w * h);
+
+    // Special case: if image has significant transparency (>25% transparent) and opaque pixels are the signature itself
+    if (transparentRatio > 0.25 && transparentRatio < 0.995) {
+      let opaqueInkCount = 0;
+      for (let y = 2; y < h - 2; y++) {
+        for (let x = 2; x < w - 2; x++) {
+          const i = y * w + x;
+          const a = data[i * 4 + 3];
+          const l = lum[i];
+          const isInkByLum = useLightInk ? (l > 255 - threshold) : (l < threshold);
+          if (a > 65 && isInkByLum) {
+            mask[i] = 1;
+            opaqueInkCount++;
+          }
+        }
+      }
+      // If alpha alone defines the signature (e.g. dark ink on transparent where luminance was uniform), fall back to alpha mask
+      if (opaqueInkCount < 35) {
+        for (let y = 2; y < h - 2; y++) {
+          for (let x = 2; x < w - 2; x++) {
+            const i = y * w + x;
+            if (data[i * 4 + 3] > 90) mask[i] = 1;
+          }
+        }
+      }
+    } else if (threshMode === 'adaptive') {
+      // 3. Integral Image Local Adaptive Thresholding (handles phone camera shadows cleanly)
+      const integral = new Float64Array((w + 1) * (h + 1));
+      for (let y = 1; y <= h; y++) {
+        let rowSum = 0;
+        for (let x = 1; x <= w; x++) {
+          rowSum += lum[(y - 1) * w + (x - 1)];
+          integral[y * (w + 1) + x] = integral[(y - 1) * (w + 1) + x] + rowSum;
+        }
+      }
+      const winR = Math.max(12, Math.round(Math.min(w, h) / 18));
+      // Map user slider [15..245] (default 145) to sensitivity bias C in [4..36]
+      const bias = Math.max(5, 32 - ((threshold - 60) / 185) * 24);
+
+      for (let y = 2; y < h - 2; y++) {
+        const y0 = Math.max(0, y - winR), y1 = Math.min(h, y + winR + 1);
+        for (let x = 2; x < w - 2; x++) {
+          const x0 = Math.max(0, x - winR), x1 = Math.min(w, x + winR + 1);
+          const area = (x1 - x0) * (y1 - y0);
+          const sum = integral[y1 * (w + 1) + x1] - integral[y0 * (w + 1) + x1] -
+                      integral[y1 * (w + 1) + x0] + integral[y0 * (w + 1) + x0];
+          const localMean = sum / area;
+          const val = lum[y * w + x];
+          if (useLightInk) {
+            mask[y * w + x] = (val > localMean + bias && val > 40) ? 1 : 0;
+          } else {
+            mask[y * w + x] = (val < localMean - bias && val < 235) ? 1 : 0;
+          }
+        }
+      }
+    } else {
+      // Manual global threshold
+      for (let y = 2; y < h - 2; y++) {
+        for (let x = 2; x < w - 2; x++) {
+          const l = lum[y * w + x];
+          mask[y * w + x] = (useLightInk ? l > 255 - threshold : l < threshold) ? 1 : 0;
+        }
+      }
+    }
+
+    // 4. Morphological Stroke Healing (3x3 Dilation followed by Erosion / Closing) to bridge faint gaps
+    let current = mask;
+    if (morphHeal > 0) {
+      // Dilation passes
+      for (let p = 0; p < morphHeal; p++) {
+        const next = new Uint8Array(w * h);
+        for (let y = 2; y < h - 2; y++) {
+          for (let x = 2; x < w - 2; x++) {
+            const idx = y * w + x;
+            if (current[idx] || current[idx - 1] || current[idx + 1] ||
+                current[idx - w] || current[idx + w] ||
+                current[idx - w - 1] || current[idx - w + 1] ||
+                current[idx + w - 1] || current[idx + w + 1]) {
+              next[idx] = 1;
+            }
+          }
+        }
+        current = next;
+      }
+      // 1 Erosion pass if morphHeal >= 2 to prevent over-fattening
+      if (morphHeal >= 2) {
+        const next = new Uint8Array(w * h);
+        for (let y = 2; y < h - 2; y++) {
+          for (let x = 2; x < w - 2; x++) {
+            const idx = y * w + x;
+            if (current[idx] && current[idx - 1] && current[idx + 1] &&
+                current[idx - w] && current[idx + w]) {
+              next[idx] = 1;
+            }
+          }
+        }
+        current = next;
+      }
+    }
+
+    // 5. Despeckle isolated 1-2 pixel dust specks
+    for (let y = 2; y < h - 2; y++) {
+      for (let x = 2; x < w - 2; x++) {
+        const idx = y * w + x;
+        if (!current[idx]) continue;
+        const nCount = current[idx - 1] + current[idx + 1] + current[idx - w] + current[idx + w] +
+                       current[idx - w - 1] + current[idx - w + 1] + current[idx + w - 1] + current[idx + w + 1];
+        if (nCount === 0) current[idx] = 0;
+      }
+    }
+
+    // 6. Connected-component cleanup: remove isolated dust/noise islands
+    // without erasing legitimate short marks when the user sets the filter to 0.
+    if (minComponent > 1) {
+      const seen = new Uint8Array(w * h);
+      const queue = new Int32Array(w * h);
+      const neighbors = [-w - 1, -w, -w + 1, -1, 1, w - 1, w, w + 1];
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const start = y * w + x;
+          if (!current[start] || seen[start]) continue;
+          let head = 0, tail = 0;
+          queue[tail++] = start;
+          seen[start] = 1;
+          while (head < tail) {
+            const p = queue[head++];
+            for (const off of neighbors) {
+              const q = p + off;
+              if (!seen[q] && current[q]) {
+                seen[q] = 1;
+                queue[tail++] = q;
+              }
+            }
+          }
+          if (tail < minComponent) {
+            for (let i = 0; i < tail; i++) current[queue[i]] = 0;
+          }
+        }
+      }
+    }
+
+    return { mask: current, w, h };
+  }
+
+  // Render live binary mask & extracted strokes in the Image section preview box
+  function renderMaskPreview(mask, w, h, strokes) {
+    const pw = maskCanvas.width, ph = maskCanvas.height;
+    mctx.fillStyle = '#050811';
+    mctx.fillRect(0, 0, pw, ph);
+
+    const imgData = mctx.createImageData(pw, ph);
+    const d = imgData.data;
+    let inkPixels = 0;
+    for (let i = 0; i < w * h; i++) if (mask[i]) inkPixels++;
+
+    for (let py = 0; py < ph; py++) {
+      const sy = Math.min(h - 1, Math.floor((py / ph) * h));
+      for (let px = 0; px < pw; px++) {
+        const sx = Math.min(w - 1, Math.floor((px / pw) * w));
+        const isInk = mask[sy * w + sx];
+        const idx = (py * pw + px) * 4;
+        if (isInk) {
+          d[idx] = 30; d[idx + 1] = 64; d[idx + 2] = 98; d[idx + 3] = 255;
+        } else {
+          d[idx] = 6; d[idx + 1] = 10; d[idx + 2] = 20; d[idx + 3] = 255;
+        }
+      }
+    }
+    mctx.putImageData(imgData, 0, 0);
+
+    // Overlay extracted vector centerlines/contours in bright cyan/pink
+    if (strokes && strokes.length) {
+      const sx = pw / w, sy = ph / h;
+      mctx.lineWidth = 1.4;
+      for (let s = 0; s < strokes.length; s++) {
+        const st = strokes[s];
+        if (st.length < 2) continue;
+        mctx.beginPath();
+        mctx.moveTo(st[0].x * sx, st[0].y * sy);
+        for (let i = 1; i < st.length; i++) mctx.lineTo(st[i].x * sx, st[i].y * sy);
+        mctx.strokeStyle = s % 2 === 0 ? '#53e5ff' : '#ff6fae';
+        mctx.stroke();
+      }
+    }
+    $('maskPixelCount').textContent = `${inkPixels.toLocaleString()} ink px · ${strokes ? strokes.length : 0} paths`;
+  }
+  // FFT adapter: prefer Fedor Indutny's optimized fft.js radix-4 engine.
+  // fft.js uses interleaved complex buffers and an unnormalised forward transform.
+  // The original radix-2 implementation below is retained for offline use.
+  function fftRadix2(re, im) {
+    const n = re.length;
+    if (typeof window.FFTJS === 'function') {
+      const engine = new window.FFTJS(n);
+      const input = engine.createComplexArray();
+      const output = engine.createComplexArray();
+      for (let i = 0; i < n; i++) {
+        input[2 * i] = re[i];
+        input[2 * i + 1] = im[i];
+      }
+      engine.transform(output, input);
+      for (let i = 0; i < n; i++) {
+        re[i] = output[2 * i];
+        im[i] = output[2 * i + 1];
+      }
+      $('fftBadge').textContent = `FFT.JS RADIX-4 · N=${n}`;
+      return;
+    }
+    $('fftBadge').textContent = `RADIX-2 OFFLINE FALLBACK · N=${n}`;
+    if (n !== im.length || n < 2 || (n & (n - 1)) !== 0) {
+      throw new Error('Radix-2 FFT requires equal-length arrays with a power-of-two size.');
+    }
+
+    // Bit-reversal permutation.
+    let j = 0;
+    for (let i = 0; i < n; i++) {
+      if (i < j) {
+        let tmp = re[i]; re[i] = re[j]; re[j] = tmp;
+        tmp = im[i]; im[i] = im[j]; im[j] = tmp;
+      }
+      let m = n >> 1;
+      while (m >= 1 && j >= m) { j -= m; m >>= 1; }
+      j += m;
+    }
+
+    // Butterfly stages
+    for (let len = 2; len <= n; len <<= 1) {
+      const half = len >> 1;
+      const ang = -TAU / len;
+      const wlenRe = Math.cos(ang), wlenIm = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let wRe = 1, wIm = 0;
+        for (let k = 0; k < half; k++) {
+          const uRe = re[i + k], uIm = im[i + k];
+          const vRe = re[i + k + half] * wRe - im[i + k + half] * wIm;
+          const vIm = re[i + k + half] * wIm + im[i + k + half] * wRe;
+          re[i + k] = uRe + vRe;
+          im[i + k] = uIm + vIm;
+          re[i + k + half] = uRe - vRe;
+          im[i + k + half] = uIm - vIm;
+          const nextWRe = wRe * wlenRe - wIm * wlenIm;
+          wIm = wRe * wlenIm + wIm * wlenRe;
+          wRe = nextWRe;
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // 2. STROKE SMOOTHING, 2-OPT TSP ORDERING & UNIFORM ARC-LENGTH RESAMPLING
+  // ============================================================================
+
+  // Smooth jittery hand/raster strokes while keeping endpoints pinned
+  function smoothStroke(pts, passes) {
+    if (passes <= 0 || pts.length < 4) return pts.slice();
+    let cur = pts.map(p => ({ x: p.x, y: p.y }));
+    const closed = Math.hypot(cur[0].x - cur[cur.length - 1].x, cur[0].y - cur[cur.length - 1].y) < 2.5;
+    for (let s = 0; s < passes; s++) {
+      const next = new Array(cur.length);
+      for (let i = 0; i < cur.length; i++) {
+        if (!closed && (i === 0 || i === cur.length - 1)) {
+          next[i] = { x: cur[i].x, y: cur[i].y };
+        } else {
+          const p0 = cur[(i - 1 + cur.length) % cur.length];
+          const p1 = cur[i];
+          const p2 = cur[(i + 1) % cur.length];
+          next[i] = {
+            x: 0.25 * p0.x + 0.5 * p1.x + 0.25 * p2.x,
+            y: 0.25 * p0.y + 0.5 * p1.y + 0.25 * p2.y
+          };
+        }
+      }
+      cur = next;
+    }
+    return cur;
+  }
+
+  // Greedy Nearest-Neighbor + 2-Opt Reversible Tour Optimizer for multi-stroke paths
+  function optimizeStrokeOrder(strokes, preserveOrder = false) {
+    const valid = strokes.filter(s => s && s.length >= 2);
+    if (!valid.length) return [];
+    if (valid.length === 1 || preserveOrder) return valid.map(s => s.slice());
+
+    const M = valid.length;
+    const used = new Uint8Array(M);
+    const tour = [];
+
+    // Start with the stroke whose start/end is closest to top-left
+    let bestFirst = 0, bestScore = Infinity;
+    for (let i = 0; i < M; i++) {
+      const p = valid[i][0];
+      const sc = p.x + p.y * 0.6;
+      if (sc < bestScore) { bestScore = sc; bestFirst = i; }
+    }
+    used[bestFirst] = 1;
+    tour.push(valid[bestFirst].slice());
+
+    // Greedy nearest-neighbor considering both forward and reversed stroke orientation
+    for (let step = 1; step < M; step++) {
+      const tail = tour[tour.length - 1];
+      const lastPt = tail[tail.length - 1];
+      let bestIdx = -1, bestRev = false, bestDist = Infinity;
+
+      for (let i = 0; i < M; i++) {
+        if (used[i]) continue;
+        const s = valid[i];
+        const dStart = Math.hypot(s[0].x - lastPt.x, s[0].y - lastPt.y);
+        const dEnd = Math.hypot(s[s.length - 1].x - lastPt.x, s[s.length - 1].y - lastPt.y);
+        if (dStart < bestDist) { bestDist = dStart; bestIdx = i; bestRev = false; }
+        if (dEnd < bestDist) { bestDist = dEnd; bestIdx = i; bestRev = true; }
+      }
+      used[bestIdx] = 1;
+      const chosen = valid[bestIdx].slice();
+      if (bestRev) chosen.reverse();
+      tour.push(chosen);
+    }
+
+    // 2-Opt refinement with orientation flip check
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    let improved = true, iter = 0;
+    while (improved && iter++ < 40) {
+      improved = false;
+      // Check single-stroke orientation flips first
+      for (let i = 0; i < M; i++) {
+        const prevEnd = tour[(i - 1 + M) % M][tour[(i - 1 + M) % M].length - 1];
+        const nextStart = tour[(i + 1) % M][0];
+        const curStart = tour[i][0], curEnd = tour[i][tour[i].length - 1];
+        const costNow = dist(prevEnd, curStart) + dist(curEnd, nextStart);
+        const costFlip = dist(prevEnd, curEnd) + dist(curStart, nextStart);
+        if (costFlip + 1e-4 < costNow) {
+          tour[i].reverse();
+          improved = true;
+        }
+      }
+      // 2-Opt segment reversal
+      for (let i = 0; i < M - 1; i++) {
+        for (let k = i + 1; k < M; k++) {
+          const prevI = tour[(i - 1 + M) % M];
+          const nextK = tour[(k + 1) % M];
+          if ((i === 0 && k === M - 1)) continue;
+          const a = prevI[prevI.length - 1];
+          const b = tour[i][0];
+          const c = tour[k][tour[k].length - 1];
+          const d = nextK[0];
+          const curCost = dist(a, b) + dist(c, d);
+          const newCost = dist(a, c) + dist(b, d);
+          if (newCost + 1e-4 < curCost) {
+            // Reverse order of strokes in [i..k] and reverse each stroke inside
+            const sub = tour.slice(i, k + 1).reverse().map(s => s.slice().reverse());
+            tour.splice(i, k - i + 1, ...sub);
+            improved = true;
+          }
+        }
+      }
+    }
+    return tour;
+  }
+
+  // Convert ordered strokes into exactly N uniform arc-length complex samples
+  function buildUniformSamplesFromStrokes(strokes, targetN, smoothPasses, closeLoopBridge, preserveOrder = false) {
+    const smoothed = strokes.map(s => smoothStroke(s, smoothPasses)).filter(s => s.length >= 2);
+    if (!smoothed.length) throw new Error('No valid strokes found to trace.');
+
+    const ordered = optimizeStrokeOrder(smoothed, preserveOrder);
+
+    // Compute bounding box & center for normalization
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const s of ordered) {
+      for (const p of s) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+    }
+    const cx = (minX + maxX) * 0.5;
+    const cy = (minY + maxY) * 0.5;
+    const span = Math.max(maxX - minX, maxY - minY, 1e-5) * 0.5;
+
+    // Build continuous piecewise-linear chain with explicit bridge tags
+    // Bridge travel speed is weighted slightly faster (0.55x arc weight) so FFT spends more samples on real ink!
+    const BRIDGE_WEIGHT = 0.55;
+    const segments = []; // {p0, p1, len, bridge}
+    let totalLen = 0;
+
+    for (let sIdx = 0; sIdx < ordered.length; sIdx++) {
+      const stroke = ordered[sIdx].map(p => ({
+        x: (p.x - cx) / span,
+        y: -(p.y - cy) / span
+      }));
+
+      if (sIdx > 0) {
+        const prevStroke = segments[segments.length - 1].p1;
+        const gap = Math.hypot(stroke[0].x - prevStroke.x, stroke[0].y - prevStroke.y);
+        if (gap > 0.015) {
+          const wLen = gap * BRIDGE_WEIGHT;
+          segments.push({ p0: prevStroke, p1: stroke[0], len: wLen, bridge: true });
+          totalLen += wLen;
+        }
+      }
+
+      for (let i = 1; i < stroke.length; i++) {
+        const d = Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
+        if (d > 1e-7) {
+          segments.push({ p0: stroke[i - 1], p1: stroke[i], len: d, bridge: false });
+          totalLen += d;
+        }
+      }
+    }
+
+    // Smooth closing bridge from end of last stroke back to start of first stroke
+    if ( segments.length > 0 && closeLoopBridge ) {
+      const firstPt = segments[0].p0;
+      const lastPt = segments[segments.length - 1].p1;
+      const closeGap = Math.hypot(firstPt.x - lastPt.x, firstPt.y - lastPt.y);
+      if (closeGap > 0.02) {
+        const wLen = closeGap * BRIDGE_WEIGHT;
+        segments.push({ p0: lastPt, p1: firstPt, len: wLen, bridge: true });
+        totalLen += wLen;
+      }
+    }
+
+    if (totalLen <= 0 || !segments.length) {
+      throw new Error('Extracted path has zero length.');
+    }
+
+    // Exact uniform arc-length linear interpolation into N samples
+    const samples = new Array(targetN);
+    let segIdx = 0;
+    let accum = 0;
+
+    for (let j = 0; j < targetN; j++) {
+      const targetDist = (j / targetN) * totalLen;
+      while (segIdx < segments.length - 1 && accum + segments[segIdx].len < targetDist) {
+        accum += segments[segIdx].len;
+        segIdx++;
+      }
+      const seg = segments[segIdx];
+      const localT = seg.len > 0 ? Math.min(1, Math.max(0, (targetDist - accum) / seg.len)) : 0;
+      samples[j] = {
+        x: seg.p0.x + (seg.p1.x - seg.p0.x) * localT,
+        y: seg.p0.y + (seg.p1.y - seg.p0.y) * localT,
+        bridge: seg.bridge
+      };
+    }
+
+    return { samples, strokeCount: ordered.length };
+  }
+
+  // Compute FFT coefficients from current rawStrokes
+  function rebuildFFT(preserveStrokeOrder = false) {
+    if (!rawStrokes.length) return;
+    N = Number($('fftSize').value);
+    if (!Number.isInteger(N) || N < 16 || N > 4096 || (N & (N - 1)) !== 0) {
+      throw new Error('FFT size must be a power of two between 16 and 4096.');
+    }
+    const smoothPasses = Number($('smoothPasses').value);
+    const closeLoop = $('closeLoop').checked;
+
+    const { samples, strokeCount } = buildUniformSamplesFromStrokes(
+      rawStrokes, N, smoothPasses, closeLoop, preserveStrokeOrder
+    );
+    normalizedSamples = samples;
+    if (audioPhaseActive) audioPhase = ((time % 1) + 1) % 1;
+
+    const re = new Float64Array(N);
+    const im = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      re[i] = samples[i].x;
+      im[i] = samples[i].y;
+    }
+
+    // Run O(N log N) Cooley-Tukey Radix-2 FFT
+    fftRadix2(re, im);
+
+    // Convert FFT bins into signed frequencies [-N/2 .. N/2 - 1]
+    coeff = new Array(N);
+    for (let m = 0; m < N; m++) {
+      const freq = m < (N >> 1) ? m : m - N;
+      const cRe = re[m] / N;
+      const cIm = im[m] / N;
+      coeff[m] = {
+        freq,
+        amp: Math.hypot(cRe, cIm),
+        phase: Math.atan2(cIm, cRe),
+        re: cRe,
+        im: cIm
+      };
+    }
+
+    // Sort harmonics by amplitude descending for sharpest partial sums
+    coeff.sort((a, b) => b.amp - a.amp);
+
+    // Update UI sliders & badges
+    const maxTerms = N;
+    $('terms').max = maxTerms;
+    if (Number($('terms').value) > maxTerms) {
+      $('terms').value = maxTerms;
+    }
+    updateStatsUI(strokeCount);
+    drawInspector();
+    updateTrackQuality();
+    drawPlots();
+    if (typeof updateEquationOutput === 'function') {
+      const eqSlider = $('equationTerms');
+      eqSlider.max = maxTerms;
+      if (Number(eqSlider.value) > maxTerms) eqSlider.value = maxTerms;
+      updateEquationOutput();
+    }
+
+    // Reset trace seamlessly
+    trace = [];
+    time = 0;
+    repeatIndex = 0;
+  }
+
+
+  // --------------------------------------------------------------------------
+  // SIGNAL PLOTTER + TRACK QUALITY METRICS
+  // --------------------------------------------------------------------------
+  const plotCanvas = $('plotCanvas');
+  const plotCtx = plotCanvas.getContext('2d');
+  function drawPlots() {
+    if (!plotCanvas || !plotCtx) return;
+    const w = plotCanvas.width, h = plotCanvas.height;
+    plotCtx.clearRect(0, 0, w, h);
+    plotCtx.fillStyle = '#070d19';
+    plotCtx.fillRect(0, 0, w, h);
+    const grid = $('showTrackGrid').checked;
+    if (grid) {
+      plotCtx.strokeStyle = 'rgba(120,150,190,.15)';
+      plotCtx.lineWidth = 1;
+      for (let i=1;i<8;i++){const x=i*w/8;plotCtx.beginPath();plotCtx.moveTo(x,0);plotCtx.lineTo(x,h);plotCtx.stroke();}
+      for (let i=1;i<5;i++){const y=i*h/5;plotCtx.beginPath();plotCtx.moveTo(0,y);plotCtx.lineTo(w,y);plotCtx.stroke();}
+    }
+    if (!coeff.length || !normalizedSamples.length) {
+      plotCtx.fillStyle='#91a0b8'; plotCtx.font='16px system-ui'; plotCtx.fillText('Load a path to plot its Fourier data',18,30);
+      return;
+    }
+    const mode=$('plotMode').value;
+    const left=34, right=w-12, top=12, bottom=h-24, pw=right-left, ph=bottom-top;
+    const drawLine=(values,color,minV,maxV)=>{
+      if (!values.length) return;
+      const range=Math.max(1e-9,maxV-minV);
+      plotCtx.beginPath();
+      values.forEach((v,i)=>{
+        const x=left+(i/Math.max(1,values.length-1))*pw;
+        const y=bottom-((v-minV)/range)*ph;
+        if(i===0)plotCtx.moveTo(x,y);else plotCtx.lineTo(x,y);
+      });
+      plotCtx.strokeStyle=color;plotCtx.lineWidth=2;plotCtx.shadowColor=color;plotCtx.shadowBlur=5;plotCtx.stroke();plotCtx.shadowBlur=0;
+    };
+    if(mode==='spectrum'){
+      const max=Math.max(...coeff.slice(0,Math.min(coeff.length,256)).map(q=>q.amp),1e-9);
+      const n=Math.min(256,coeff.length), bw=pw/n;
+      for(let i=0;i<n;i++){
+        const v=coeff[i].amp/max, bh=v*ph;
+        plotCtx.fillStyle=i<Number($('terms').value)?`hsla(${190+i*0.55},90%,65%,.9)`:'rgba(100,116,139,.38)';
+        plotCtx.fillRect(left+i*bw,bottom-bh,Math.max(1,bw-1),bh);
+      }
+      plotCtx.fillStyle='#91a0b8';plotCtx.font='11px system-ui';plotCtx.fillText('Strongest harmonics →',left, h-7);
+    } else if(mode==='xy'){
+      const sx=normalizedSamples.map(p=>p.x), sy=normalizedSamples.map(p=>p.y);
+      const max=Math.max(...sx.map(Math.abs),...sy.map(Math.abs),1e-6);
+      drawLine(sx,'#53e5ff',-max,max);drawLine(sy,'#ff6fae',-max,max);
+      plotCtx.fillStyle='#53e5ff';plotCtx.font='11px system-ui';plotCtx.fillText('X',left+4,top+11);
+      plotCtx.fillStyle='#ff6fae';plotCtx.fillText('Y',left+22,top+11);
+    } else if(mode==='phase'){
+      const vals=coeff.slice(0,Math.min(256,coeff.length)).map(q=>q.phase);
+      drawLine(vals,'#a78bfa',-Math.PI,Math.PI);
+      plotCtx.fillStyle='#91a0b8';plotCtx.font='11px system-ui';plotCtx.fillText('Phase (−π to +π)',left,h-7);
+    } else {
+      const vals=normalizedSamples.map((p,i)=>p.bridge?1:0);
+      drawLine(vals,'#fbbf24',0,1);
+      plotCtx.fillStyle='#91a0b8';plotCtx.font='11px system-ui';plotCtx.fillText('Pen-up bridge regions',left,h-7);
+    }
+  }
+
+  function updateTrackQuality() {
+    if (!normalizedSamples.length) return;
+    let bridges=0, sum=0, sum2=0;
+    for(let i=0;i<normalizedSamples.length;i++){
+      if(normalizedSamples[i].bridge) bridges++;
+      const a=normalizedSamples[i], b=normalizedSamples[(i+1)%normalizedSamples.length];
+      const d=Math.hypot(b.x-a.x,b.y-a.y);
+      sum+=d;sum2+=d*d;
+    }
+    const mean=sum/normalizedSamples.length;
+    const sd=Math.sqrt(Math.max(0,sum2/normalizedSamples.length-mean*mean));
+    const bridgePct=100*bridges/normalizedSamples.length;
+    const cv=mean>0?sd/mean:0;
+    const quality=Math.max(0,Math.min(100,Math.round(100/(1+cv*1.8+bridgePct/35))));
+    $('trackHealth').textContent=`${quality}% quality`;
+    $('trackMetrics').textContent=`${bridgePct.toFixed(1)}% · ${mean.toFixed(4)} ± ${sd.toFixed(4)}`;
+  }
+
+  function updateStatsUI(strokeCount) {
+    const activeTerms = Math.min(Number($('terms').value), coeff.length);
+    $('termsOut').textContent = activeTerms;
+    $('statTerms').textContent = activeTerms;
+    $('statSamples').textContent = N;
+    $('fftBadge').textContent = `RADIX-2 FFT · N=${N}`;
+    $('hudTerms').textContent = `${activeTerms} / ${N}`;
+    if (strokeCount !== undefined) {
+      $('hudStrokes').textContent = strokeCount;
+      $('inspectorInfo').textContent = `${strokeCount} stroke${strokeCount === 1 ? '' : 's'} · ${N} pts`;
+    }
+  }
+
+  // Draw extracted path & 2-Opt bridges in the mini sidebar inspector
+  function drawInspector() {
+    const w = inspector.width, h = inspector.height;
+    ictx.clearRect(0, 0, w, h);
+
+    // Subtle grid
+    ictx.strokeStyle = 'rgba(100,140,190,0.08)';
+    ictx.lineWidth = 1;
+    for (let x = 20; x < w; x += 20) { ictx.beginPath(); ictx.moveTo(x, 0); ictx.lineTo(x, h); ictx.stroke(); }
+    for (let y = 20; y < h; y += 20) { ictx.beginPath(); ictx.moveTo(0, y); ictx.lineTo(w, y); ictx.stroke(); }
+
+    if (!normalizedSamples.length) return;
+    const scale = Math.min(w, h) * 0.42;
+    const ox = w * 0.5, oy = h * 0.5;
+
+    for (let i = 1; i < normalizedSamples.length; i++) {
+      const p0 = normalizedSamples[i - 1], p1 = normalizedSamples[i];
+      ictx.beginPath();
+      ictx.moveTo(ox + p0.x * scale, oy - p0.y * scale);
+      ictx.lineTo(ox + p1.x * scale, oy - p1.y * scale);
+      if (p1.bridge) {
+        ictx.strokeStyle = 'rgba(251,191,36,0.38)';
+        ictx.lineWidth = 1;
+      } else {
+        const hue = Math.round((i / normalizedSamples.length) * 190 + 180);
+        ictx.strokeStyle = `hsl(${hue}, 90%, 65%)`;
+        ictx.lineWidth = 1.6;
+      }
+      ictx.stroke();
+    }
+
+    // Mark start point
+    const s0 = normalizedSamples[0];
+    ictx.fillStyle = '#34d399';
+    ictx.beginPath();
+    ictx.arc(ox + s0.x * scale, oy - s0.y * scale, 3, 0, TAU);
+    ictx.fill();
+  }
+
+  // ============================================================================
+  // 3. MATHEMATICAL PRESETS
+  // ============================================================================
+  function presetPoint(shape, t) {
+    const a = TAU * t;
+    if (shape === 'heart') {
+      return {
+        x: 16 * Math.sin(a) ** 3 / 17,
+        y: (13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)) / 17
+      };
+    }
+    if (shape === 'treble') {
+      // Rich multi-harmonic musical clef-like parametric curve
+      const x = 0.55 * Math.sin(a) + 0.35 * Math.sin(2 * a + 0.5) - 0.22 * Math.cos(3 * a);
+      const y = 0.95 * Math.cos(a) - 0.32 * Math.sin(2 * a) + 0.25 * Math.cos(4 * a);
+      return { x, y: -y };
+    }
+    if (shape === 'infinity') {
+      const denom = 1 + Math.cos(a) ** 2;
+      return { x: Math.sin(a) / denom * 1.5, y: (Math.sin(a) * Math.cos(a)) / denom * 1.5 };
+    }
+    if (shape === 'butterfly') {
+      const r = Math.exp(Math.sin(a)) - 2 * Math.cos(4 * a) + Math.sin((2 * a - Math.PI) / 24) ** 5;
+      return { x: r * Math.cos(a) * 0.3, y: -r * Math.sin(a) * 0.3 };
+    }
+    if (shape === 'star') {
+      const k = (t * 10) % 10, idx = Math.floor(k), f = k - idx;
+      const pts = [];
+      for (let i = 0; i <= 10; i++) {
+        const ang = -Math.PI / 2 + (i * Math.PI) / 5;
+        const rad = i % 2 === 0 ? 1.0 : 0.4;
+        pts.push({ x: rad * Math.cos(ang), y: rad * Math.sin(ang) });
+      }
+      return {
+        x: pts[idx].x * (1 - f) + pts[idx + 1].x * f,
+        y: pts[idx].y * (1 - f) + pts[idx + 1].y * f
+      };
+    }
+    if (shape === 'flower') {
+      const r = 0.28 + 0.72 * Math.cos(5 * a);
+      return { x: r * Math.cos(a), y: r * Math.sin(a) };
+    }
+    if (shape === 'square') {
+      const p = (t * 4) % 4, k = Math.floor(p), f = p - k;
+      const v = [[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8], [-0.8, -0.8]];
+      return { x: v[k][0] * (1 - f) + v[k + 1][0] * f, y: v[k][1] * (1 - f) + v[k + 1][1] * f };
+    }
+    // Spiral loop (outward and smoothly back)
+    const u = t < 0.75 ? t / 0.75 : (1 - t) / 0.25;
+    const theta = u * 3 * TAU;
+    const r = 0.1 + 0.85 * u;
+    return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
+  }
+
+
+  // Advanced curve library: deterministic fractals, generative art and design profiles.
+  // Each result is a closed, normalized point path sampled by arc length before FFT.
+  const curveLibrary = {
+    fractal: {
+      hint: 'Recursive self-similar paths',
+      tip: 'Fractal paths use recursive geometry (not a raster approximation): Hilbert space-filling curve, Koch snowflake, Dragon curve and Minkowski boundary.',
+      items: [
+        ['hilbert','Hilbert space-filling curve'],
+        ['koch','Koch snowflake boundary'],
+        ['dragon','Dragon curve'],
+        ['minkowski','Minkowski island'],
+        ['sierpinski','Sierpiński arrowhead curve']
+      ]
+    },
+    generative: {
+      hint: 'Algorithmic visual compositions',
+      tip: 'Generative art curves combine harmonics, radial modulation and hypotrochoid-style motion to create repeatable ornamental patterns.',
+      items: [
+        ['spirograph','Spirograph rosette'],
+        ['epitrochoid','Epitrochoid petals'],
+        ['lissajous','Lissajous weave'],
+        ['superformula','Superformula organism'],
+        ['harmonic','Harmonic interference flower'],
+        ['orbit','Orbit mandala']
+      ]
+    },
+    design: {
+      hint: 'Profiles for CAD-style exploration',
+      tip: 'Parametric profiles are useful starting curves for product form studies, engraving, CNC concept paths and vector illustration. They are exploratory curves, not manufacturing-ready toolpaths.',
+      items: [
+        ['superellipse','Superellipse / rounded rectangle'],
+        ['gear','Involute-inspired gear profile'],
+        ['cycloid','Cycloidal gear-like profile'],
+        ['wave','Periodic waveguide profile'],
+        ['clover','Tangent-continuous clover'],
+        ['arch','Architectural arch loop']
+      ]
+    }
+  };
+
+  function normalizePolyline(points) {
+    if (!points || points.length < 2) return points || [];
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for (const p of points) { minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); }
+    const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+    const span=Math.max(maxX-minX,maxY-minY,1e-9);
+    return points.map(p=>({x:(p.x-cx)*1.8/span,y:(p.y-cy)*1.8/span}));
+  }
+
+  function samplePolyline(points, count) {
+    if (!points || points.length < 2) return Array.from({length:count},()=>({x:0,y:0}));
+    const pts=points.slice();
+    if (Math.hypot(pts[0].x-pts[pts.length-1].x,pts[0].y-pts[pts.length-1].y)>1e-8) pts.push({...pts[0]});
+    const lengths=[0];
+    for(let i=1;i<pts.length;i++) lengths.push(lengths[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
+    const total=lengths[lengths.length-1]||1, result=[];
+    let seg=1;
+    for(let i=0;i<count;i++){
+      const d=total*i/count;
+      while(seg<lengths.length-1 && lengths[seg]<d) seg++;
+      const span=lengths[seg]-lengths[seg-1]||1, f=(d-lengths[seg-1])/span;
+      result.push({x:pts[seg-1].x+(pts[seg].x-pts[seg-1].x)*f,y:pts[seg-1].y+(pts[seg].y-pts[seg-1].y)*f});
+    }
+    return result;
+  }
+
+  function hilbertPoints(order) {
+    const n=2**order, total=n*n, pts=[];
+    function d2xy(d) {
+      let x=0,y=0,t=d;
+      for(let s=1;s<n;s*=2){
+        const rx=1 & (t>>1), ry=1 & (t ^ rx);
+        if(ry===0){if(rx===1){x=s-1-x;y=s-1-y;} const tmp=x;x=y;y=tmp;}
+        x+=s*rx;y+=s*ry;t>>=2;
+      }
+      return {x,y};
+    }
+    for(let d=0;d<total;d++){const p=d2xy(d);pts.push({x:p.x,y:p.y});}
+    return normalizePolyline(pts);
+  }
+
+  function kochSnowflake(order) {
+    let pts=[{x:0,y:0},{x:1,y:0},{x:.5,y:Math.sqrt(3)/2},{x:0,y:0}];
+    for(let k=0;k<order;k++){
+      const next=[];
+      for(let i=0;i<pts.length-1;i++){
+        const a=pts[i],b=pts[i+1],dx=(b.x-a.x)/3,dy=(b.y-a.y)/3;
+        const p1={x:a.x+dx,y:a.y+dy},p3={x:a.x+2*dx,y:a.y+2*dy};
+        const ang=Math.atan2(dy,dx)-Math.PI/3, len=Math.hypot(dx,dy);
+        const p2={x:p1.x+len*Math.cos(ang),y:p1.y+len*Math.sin(ang)};
+        next.push(a,p1,p2,p3);
+      }
+      next.push(pts[pts.length-1]);pts=next;
+    }
+    return normalizePolyline(pts);
+  }
+
+  function lSystemPath(axiom, rules, angleDeg, iterations, step=1) {
+    let s=axiom;
+    for(let i=0;i<iterations;i++){let next='';for(const ch of s)next+=rules[ch]||ch;s=next;}
+    let x=0,y=0,ang=0,stack=[],pts=[{x,y}],a=angleDeg*Math.PI/180;
+    for(const ch of s){
+      if(ch==='F'||ch==='G'){x+=step*Math.cos(ang);y+=step*Math.sin(ang);pts.push({x,y});}
+      else if(ch==='+')ang+=a;
+      else if(ch==='-')ang-=a;
+      else if(ch==='[')stack.push({x,y,ang});
+      else if(ch===']'){const q=stack.pop();if(q){x=q.x;y=q.y;ang=q.ang;pts.push({x,y});}}
+    }
+    return normalizePolyline(pts);
+  }
+
+  function advancedCurvePoint(id,t) {
+    const a=TAU*t, c=Math.cos, s=Math.sin;
+    if(id==='spirograph') return {x:.62*c(5*a)+.25*c(8*a),y:.62*s(5*a)-.25*s(8*a)};
+    if(id==='epitrochoid') return {x:.55*c(3*a)+.22*c(8*a),y:.55*s(3*a)-.22*s(8*a)};
+    if(id==='lissajous') return {x:.82*s(3*a+Math.PI/2),y:.82*s(4*a)};
+    if(id==='superformula'){
+      const m=7,n1=.28,n2=1.7,n3=1.7;
+      const r=Math.pow(Math.pow(Math.abs(c(m*a/4)),n2)+Math.pow(Math.abs(s(m*a/4)),n3),-1/n1);
+      return {x:.72*r*c(a),y:.72*r*s(a)};
+    }
+    if(id==='harmonic'){const r=.48+.22*c(7*a)+.12*s(13*a);return {x:r*c(a),y:r*s(a)};}
+    if(id==='orbit'){const r=.58+.2*c(9*a)+.08*c(17*a);return {x:r*c(6*a),y:r*s(6*a)};}
+    if(id==='superellipse'){
+      const e=.55, p=2/e;
+      return {x:Math.sign(c(a))*Math.pow(Math.abs(c(a)),p),y:Math.sign(s(a))*Math.pow(Math.abs(s(a)),p)};
+    }
+    if(id==='gear'){
+      const teeth=14, base=.72, depth=.12;
+      const q=((t*teeth)%1), r=base+depth*(q<.18?0:q<.32?(q-.18)/.14:q<.68?1:q<.82?1-(q-.68)/.14:0);
+      return {x:r*c(a),y:r*s(a)};
+    }
+    if(id==='cycloid'){const r=.62+.12*c(12*a);return {x:r*c(a)+.07*c(13*a),y:r*s(a)+.07*s(13*a)};}
+    if(id==='wave'){const r=.58+.13*s(6*a)+.05*s(18*a);return {x:r*c(a),y:.78*r*s(a)};}
+    if(id==='clover'){const r=.3+.58*Math.pow(Math.abs(c(4*a)),.8);return {x:r*c(a),y:r*s(a)};}
+    if(id==='arch'){const x=.82*s(a), y=.68*c(a);return {x,y:y+.14*c(2*a)};}
+    return {x:c(a),y:s(a)};
+  }
+
+  function buildAdvancedPreset(id, count) {
+    let path=null;
+    if(id==='hilbert') path=hilbertPoints(5);
+    else if(id==='koch') path=kochSnowflake(3);
+    else if(id==='dragon') path=lSystemPath('FX',{'X':'X+YF+','Y':'-FX-Y'},90,10);
+    else if(id==='minkowski') path=lSystemPath('F+F+F+F',{'F':'F+F-F-FF+F+F-F'},90,2);
+    else if(id==='sierpinski') path=lSystemPath('A',{'A':'B-A-B','B':'A+B+A'},60,7);
+    if(path) return samplePolyline(path,count);
+    const pts=Array.from({length:count},(_,i)=>advancedCurvePoint(id,i/count));
+    return normalizePolyline(pts);
+  }
+
+  function populateCurvePattern(family) {
+    const data=curveLibrary[family], select=$('curvePattern');
+    if(!data || !select) return;
+    select.innerHTML=data.items.map(([v,label])=>`<option value="${v}">${label}</option>`).join('');
+    $('curveFamilyHint').textContent=data.hint;
+    $('curveLibraryTip').textContent=data.tip;
+  }
+
+  function updateCurveFamilyUI() {
+    const family=$('curveFamily').value, classic=family==='classic';
+    $('classicCurveControl').classList.toggle('hidden',!classic);
+    $('advancedCurveControl').classList.toggle('hidden',classic);
+    if(!classic) populateCurvePattern(family);
+    else $('curveLibraryTip').textContent='Classic mathematical curves remain available alongside the new fractal, generative-art and parametric-design libraries.';
+  }
+
+  function loadPreset() {
+    currentSourceMode = 'preset';
+    $('activeSourceBadge').textContent = 'Preset Curve';
+    const family = $('curveFamily')?.value || 'classic';
+    const pts = family === 'classic'
+      ? Array.from({ length: 1024 }, (_, i) => presetPoint($('shape').value, i / 1024))
+      : buildAdvancedPreset($('curvePattern').value, 1024);
+    pts.push({ ...pts[0] });
+    rawStrokes = [pts];
+    rebuildFFT(true);
+  }
+
+  // ============================================================================
+  // 4. RASTER EXTRACTION PIPELINE: SPUR-PRUNED SKELETON & MARCHING SQUARES
+  // ============================================================================
+
+  function createBinaryMask(offCanvas, threshold = 145, invert = false) {
+    const c = offCanvas.getContext('2d', { willReadFrequently: true });
+    const w = offCanvas.width, h = offCanvas.height;
+    const data = c.getImageData(0, 0, w, h).data;
+    const mask = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4;
+        const alpha = data[idx + 3];
+        if (alpha < 32) {
+          mask[y * w + x] = 0;
+          continue;
+        }
+        const lum = 0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
+        mask[y * w + x] = (invert ? lum > 255 - threshold : lum < threshold) ? 1 : 0;
+      }
+    }
+    return { mask, w, h };
+  }
+
+  // Algorithm A: Marching Squares Sub-Pixel Contour Extractor
+  function marchingSquaresContours(mask, w, h) {
+    const visitedHoriz = new Uint8Array((w + 1) * (h + 1));
+    const visitedVert = new Uint8Array((w + 1) * (h + 1));
+    // Build adjacency list of boundary segments
+    const ptKey = (x2, y2) => (y2 * (2 * w + 2) + x2);
+    const adj = new Map();
+    const coordMap = new Map();
+
+    function addSeg(ax2, ay2, bx2, by2) {
+      const ka = ptKey(ax2, ay2), kb = ptKey(bx2, by2);
+      coordMap.set(ka, { x: ax2 * 0.5, y: ay2 * 0.5 });
+      coordMap.set(kb, { x: bx2 * 0.5, y: by2 * 0.5 });
+      if (!adj.has(ka)) adj.set(ka, []);
+      if (!adj.has(kb)) adj.set(kb, []);
+      adj.get(ka).push(kb);
+      adj.get(kb).push(ka);
+    }
+
+    for (let y = 0; y < h - 1; y++) {
+      for (let x = 0; x < w - 1; x++) {
+        const tl = mask[y * w + x];
+        const tr = mask[y * w + (x + 1)];
+        const br = mask[(y + 1) * w + (x + 1)];
+        const bl = mask[(y + 1) * w + x];
+        const code = (tl << 3) | (tr << 2) | (br << 1) | bl;
+        if (code === 0 || code === 15) continue;
+
+        // Midpoints in doubled integer coordinates (2*x, 2*y)
+        const top = [2 * x + 1, 2 * y];
+        const right = [2 * x + 2, 2 * y + 1];
+        const bottom = [2 * x + 1, 2 * y + 2];
+        const left = [2 * x, 2 * y + 1];
+
+        switch (code) {
+          case 1: case 14: addSeg(...left, ...bottom); break;
+          case 2: case 13: addSeg(...bottom, ...right); break;
+          case 3: case 12: addSeg(...left, ...right); break;
+          case 4: case 11: addSeg(...top, ...right); break;
+          case 5:
+            addSeg(...left, ...top);
+            addSeg(...bottom, ...right);
+            break;
+          case 6: case 9: addSeg(...top, ...bottom); break;
+          case 7: case 8: addSeg(...left, ...top); break;
+          case 10:
+            addSeg(...top, ...right);
+            addSeg(...left, ...bottom);
+            break;
+        }
+      }
+    }
+
+    // Trace closed loops and open chains from the segment graph
+    const usedEdges = new Set();
+    const edgeId = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+    const strokes = [];
+
+    for (const [startNode, neighbors] of adj.entries()) {
+      for (const firstNext of neighbors) {
+        const e0 = edgeId(startNode, firstNext);
+        if (usedEdges.has(e0)) continue;
+
+        usedEdges.add(e0);
+        const chain = [coordMap.get(startNode), coordMap.get(firstNext)];
+        let prev = startNode, curr = firstNext;
+
+        while (true) {
+          const ns = adj.get(curr) || [];
+          let nextNode = null;
+          for (const cand of ns) {
+            if (cand === prev) continue;
+            const eid = edgeId(curr, cand);
+            if (!usedEdges.has(eid)) {              nextNode = cand;
+              usedEdges.add(eid);
+              break;
+            }
+          }
+          if (nextNode === null) break;
+          chain.push(coordMap.get(nextNode));
+          prev = curr;
+          curr = nextNode;
+          if (curr === startNode) break;
+        }
+
+        if (chain.length >= 10) {
+          strokes.push(chain);
+        }
+      }
+    }
+
+    if (!strokes.length) {
+      throw new Error('No contour outlines found. Adjust threshold or polarity.');
+    }
+    return strokes;
+  }
+
+  // Algorithm B: Zhang-Suen Centerline Thinning + Spur Pruning + Chain Decomposition
+  function skeletonToStrokes(mask, width, height, spurPasses = 6) {
+    const at = (x, y) => mask[y * width + x];
+    const toDelete = [];
+    let changed = true, passes = 0;
+
+    // 1. Zhang-Suen Thinning
+    while (changed && passes++ < 120) {
+      changed = false;
+      for (let phase = 0; phase < 2; phase++) {
+        toDelete.length = 0;
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const p = y * width + x;
+            if (!mask[p]) continue;
+            const n0 = at(x, y - 1), n1 = at(x + 1, y - 1), n2 = at(x + 1, y), n3 = at(x + 1, y + 1);
+            const n4 = at(x, y + 1), n5 = at(x - 1, y + 1), n6 = at(x - 1, y), n7 = at(x - 1, y - 1);
+            const B = n0 + n1 + n2 + n3 + n4 + n5 + n6 + n7;
+            if (B < 2 || B > 6) continue;
+            const A = (n0 === 0 && n1 === 1) + (n1 === 0 && n2 === 1) + (n2 === 0 && n3 === 1) +
+                      (n3 === 0 && n4 === 1) + (n4 === 0 && n5 === 1) + (n5 === 0 && n6 === 1) +
+                      (n6 === 0 && n7 === 1) + (n7 === 0 && n0 === 1);
+            if (A !== 1) continue;
+            if (phase === 0) {
+              if (n0 * n2 * n4 || n2 * n4 * n6) continue;
+            } else {
+              if (n0 * n2 * n6 || n0 * n4 * n6) continue;
+            }
+            toDelete.push(p);
+          }
+        }
+        if (toDelete.length) {
+          changed = true;
+          for (const p of toDelete) mask[p] = 0;
+        }
+      }
+    }
+
+    const dirs = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+    const getNeighbors = p => {
+      const x = p % width, y = (p / width) | 0;
+      const ns = [];
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx, ny = y + dy;
+        if (nx <= 0 || nx >= width - 1 || ny <= 0 || ny >= height - 1) continue;
+        const q = ny * width + nx;
+        if (!mask[q]) continue;
+        // Suppress diagonal shortcut if an orthogonal pixel connects them
+        if (dx && dy && (mask[y * width + nx] || mask[ny * width + x])) continue;
+        ns.push(q);
+      }
+      return ns;
+    };
+
+    // 2. Iterative Spur Pruning: shave off short parasitic twigs at junctions
+    // while preserving isolated short strokes (like dots on 'i')
+    for (let s = 0; s < spurPasses; s++) {
+      const endpoints = [];
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const p = y * width + x;
+          if (!mask[p]) continue;
+          const ns = getNeighbors(p);
+          if (ns.length === 1) {
+            // Only prune if connected to a larger component
+            const n2 = getNeighbors(ns[0]);
+            if (n2.length >= 2) endpoints.push(p);
+          }
+        }
+      }
+      if (!endpoints.length) break;
+      for (const p of endpoints) mask[p] = 0;
+    }
+
+    // 3. Decompose skeleton graph into clean, non-backtracking stroke chains
+    const adj = new Map();
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const p = y * width + x;
+        if (mask[p]) adj.set(p, getNeighbors(p));
+      }
+    }
+
+    if (!adj.size) {
+      throw new Error('No skeleton centerline found. Adjust threshold or lower spur pruning.');
+    }
+
+    const usedEdges = new Set();
+    const edgeKey = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+    const strokes = [];
+
+    // Trace paths starting from endpoints (deg=1) and junctions (deg>=3) first, then closed loops (deg=2)
+    const nodes = Array.from(adj.keys()).sort((a, b) => {
+      const da = adj.get(a).length, db = adj.get(b).length;
+      const prio = d => (d === 1 ? 0 : d >= 3 ? 1 : 2);
+      return prio(da) - prio(db);
+    });
+
+    for (const start of nodes) {
+      const ns = adj.get(start);
+      for (const next of ns) {
+        const ek = edgeKey(start, next);
+        if (usedEdges.has(ek)) continue;
+
+        usedEdges.add(ek);
+        const chain = [
+          { x: start % width, y: (start / width) | 0 },
+          { x: next % width, y: (next / width) | 0 }
+        ];
+        let prev = start, curr = next;
+
+        while (true) {
+          const cns = adj.get(curr) || [];
+          // Continue smoothly through degree-2 nodes, or pick the straightest unvisited branch at a junction
+          let bestCand = null, bestDot = -2;
+          const vx = (curr % width) - (prev % width);
+          const vy = ((curr / width) | 0) - ((prev / width) | 0);
+          const vLen = Math.hypot(vx, vy) || 1;
+
+          for (const cand of cns) {
+            if (cand === prev) continue;
+            const cek = edgeKey(curr, cand);
+            if (usedEdges.has(cek)) continue;
+            const wx = (cand % width) - (curr % width);
+            const wy = ((cand / width) | 0) - ((curr / width) | 0);
+            const wLen = Math.hypot(wx, wy) || 1;
+            const dot = (vx * wx + vy * wy) / (vLen * wLen);
+            if (dot > bestDot) {
+              bestDot = dot;
+              bestCand = cand;
+            }
+          }
+
+          if (bestCand === null || bestDot < -0.35) break;
+          usedEdges.add(edgeKey(curr, bestCand));
+          chain.push({ x: bestCand % width, y: (bestCand / width) | 0 });
+          prev = curr;
+          curr = bestCand;
+          if (curr === start) break;
+        }
+
+        if (chain.length >= 3) {
+          strokes.push(chain);
+        }
+      }
+    }
+
+    if (!strokes.length) {
+      throw new Error('Could not extract continuous skeleton strokes. Try Contour mode.');
+    }
+    return strokes;
+  }
+
+  function extractStrokesFromCanvas(offCanvas, mode, threshold, polarity, spurPasses, threshMode = 'adaptive', morphHeal = 1, showPreview = false, minComponent = 8) {
+    const { mask, w, h } = createBinaryMask(offCanvas, threshold, polarity, threshMode, morphHeal, minComponent);
+    // Keep a copy of the binary mask before Zhang-Suen mutates it in-place so preview shows both ink & skeleton
+    const maskCopy = showPreview ? mask.slice() : null;
+    let strokes = [];
+    try {
+      if (mode === 'contour') {
+        strokes = marchingSquaresContours(mask, w, h);
+      } else {
+        strokes = skeletonToStrokes(mask, w, h, spurPasses);
+      }
+    } finally {
+      if (showPreview && maskCopy) {
+        renderMaskPreview(maskCopy, w, h, strokes);
+      }
+    }
+    return strokes;
+  }
+  // ============================================================================
+  // 5. SIGNATURE PAD (DIRECT VECTOR CAPTURE + OPTIONAL RASTER) & IMAGE/TEXT
+  // ============================================================================
+  const signPad = $('signPad'), signCtx = signPad.getContext('2d');
+  let padVectorStrokes = []; // Exact recorded pointer strokes
+  let activePadStroke = null;
+  let penDown = false;
+
+  function redrawSignPad() {
+    signCtx.fillStyle = '#ffffff';
+    signCtx.fillRect(0, 0, signPad.width, signPad.height);
+    signCtx.strokeStyle = '#0f172a';
+    signCtx.lineWidth = 4.5;
+    signCtx.lineCap = 'round';
+    signCtx.lineJoin = 'round';
+
+    for (const s of padVectorStrokes) {
+      if (s.length < 2) continue;
+      signCtx.beginPath();
+      signCtx.moveTo(s[0].x, s[0].y);
+      for (let i = 1; i < s.length; i++) signCtx.lineTo(s[i].x, s[i].y);
+      signCtx.stroke();
+    }
+    $('padStrokeCount').textContent = `${padVectorStrokes.length} stroke${padVectorStrokes.length === 1 ? '' : 's'}`;
+  }
+
+  // Seed default signature on the pad so user can test immediately
+  function seedDefaultSignature() {
+    padVectorStrokes = [];
+    const s1 = [];
+    for (let i = 0; i <= 90; i++) {
+      const t = i / 90;
+      const x = 95 + t * 520 + 28 * Math.sin(t * 5 * Math.PI);
+      const y = 125 - 52 * Math.sin(t * 3 * Math.PI) * (1 - 0.4 * t) + 18 * Math.cos(t * 7 * Math.PI);
+      s1.push({ x, y });
+    }
+    const flourish = [];
+    for (let i = 0; i <= 35; i++) {
+      const t = i / 35;
+      flourish.push({ x: 140 + t * 440, y: 178 + 10 * Math.sin(t * Math.PI * 2) });
+    }
+    padVectorStrokes.push(s1, flourish);
+    redrawSignPad();
+  }
+  // Start with a blank drawing pad so the user's pattern is the only FFT input.
+  padVectorStrokes = [];
+  redrawSignPad();
+
+  function padPos(ev) {
+    const r = signPad.getBoundingClientRect();
+    return {
+      x: (ev.clientX - r.left) * signPad.width / r.width,
+      y: (ev.clientY - r.top) * signPad.height / r.height
+    };
+  }
+
+  signPad.addEventListener('pointerdown', ev => {
+    penDown = true;
+    signPad.setPointerCapture(ev.pointerId);
+    const p = padPos(ev);
+    activePadStroke = [p, { x: p.x + 0.1, y: p.y + 0.1 }];
+    padVectorStrokes.push(activePadStroke);
+    redrawSignPad();
+  });
+
+  signPad.addEventListener('pointermove', ev => {
+    if (!penDown || !activePadStroke) return;
+    const p = padPos(ev);
+    const last = activePadStroke[activePadStroke.length - 1];
+    if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.8) {
+      activePadStroke.push(p);
+      signCtx.beginPath();
+      signCtx.moveTo(last.x, last.y);
+      signCtx.lineTo(p.x, p.y);
+      signCtx.stroke();
+    }
+  });
+
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(evName => {
+    signPad.addEventListener(evName, () => {
+      penDown = false;
+      activePadStroke = null;
+      $('padStrokeCount').textContent = `${padVectorStrokes.length} stroke${padVectorStrokes.length === 1 ? '' : 's'}`;
+    });
+  });
+
+  $('undoPad').addEventListener('click', () => {
+    padVectorStrokes.pop();
+    redrawSignPad();
+  });
+
+  $('clearPad').addEventListener('click', () => {
+    padVectorStrokes = [];
+    redrawSignPad();
+    $('imageStatus').textContent = 'Canvas cleared. Draw your pattern, then generate its Fourier reconstruction.';
+  });
+
+  $('usePad').addEventListener('click', () => {
+    try {
+      if (!padVectorStrokes.length || !padVectorStrokes.some(s => s.length >= 2)) throw new Error('Draw at least one stroke on the white pattern pad first.');
+      currentSourceMode = 'pad';
+      $('activeSourceBadge').textContent = 'Hand-drawn Pattern';
+      const mode = $('padMode').value;
+      if (mode === 'vector') {
+        // Direct high-precision vector capture (preserves exact drawing loops & intersections)
+        rawStrokes = padVectorStrokes.map(s => s.slice());
+        rebuildFFT(false);
+        $('imageStatus').textContent = `Fourier generated from ${rawStrokes.length} hand-drawn vector stroke(s), using ${N} samples.`;
+      } else {
+        // Raster extraction on the pad canvas
+        rawStrokes = extractStrokesFromCanvas(
+          signPad,
+          $('extractMode').value,
+          Number($('threshold').value),
+          'dark',
+          Number($('spurPrune').value),
+          'manual',
+          Number($('morphHeal').value),
+          true
+        );
+        rebuildFFT(false);
+        $('imageStatus').textContent = `Raster-traced signature into ${rawStrokes.length} paths.`;
+      }
+    } catch (e) {
+      $('imageStatus').textContent = e.message;
+    }
+  });
+
+  // High-Resolution 640x480 Uploaded Image Processing
+  function runUploadedImageExtraction() {
+    if (!imageBitmap) throw new Error('Select an image file first.');
+    currentSourceMode = 'image';
+    $('activeSourceBadge').textContent = 'Uploaded Image';
+    const off = document.createElement('canvas');
+    off.width = 640;
+    off.height = 480;
+    const c = off.getContext('2d', { willReadFrequently: true });
+    const srcW = imageBitmap.naturalWidth || imageBitmap.width || 640;
+    const srcH = imageBitmap.naturalHeight || imageBitmap.height || 480;
+    const ratio = Math.min(600 / srcW, 440 / srcH);
+    const w = srcW * ratio, h = srcH * ratio;
+
+    // Clear to transparent first so createBinaryMask can inspect alpha channel properly
+    c.clearRect(0, 0, off.width, off.height);
+    c.drawImage(imageBitmap, (off.width - w) * 0.5, (off.height - h) * 0.5, w, h);
+
+    rawStrokes = extractStrokesFromCanvas(
+      off,
+      $('extractMode').value,
+      Number($('threshold').value),
+      $('invert').value,
+      Number($('spurPrune').value),
+      $('threshMode').value,
+      Number($('morphHeal').value),
+      true,
+      Number($('minComponent').value)
+    );
+    rebuildFFT(false);
+    $('imageStatus').textContent = `Extracted ${rawStrokes.length} signature strokes (${$('extractMode').value}) at 640×480.`;
+  }
+
+  $('imageFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    $('source').value = 'image';
+    setSourcePanels('image');
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      imageBitmap = img;
+      URL.revokeObjectURL(url);
+      try {
+        runUploadedImageExtraction();
+      } catch (err) {
+        $('imageStatus').textContent = err.message;
+      }
+    };
+    img.onerror = () => {
+      $('imageStatus').textContent = 'Could not decode this image file.';
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+
+  $('processImage').addEventListener('click', () => {
+    try {
+      if (imageBitmap) {
+        runUploadedImageExtraction();
+      } else if (padVectorStrokes.length) {
+        $('usePad').click();
+      } else {
+        throw new Error('Upload an image or draw on the signature pad first.');
+      }
+    } catch (e) {
+      $('imageStatus').textContent = e.message;
+    }
+  });
+
+  // Live re-extraction when threshold / extraction mode / morphology changes
+  ['threshold', 'spurPrune', 'extractMode', 'invert', 'threshMode', 'morphHeal'].forEach(id => {
+    $(id).addEventListener('input', () => {
+      if (id === 'morphHeal') $('morphOut').textContent = `${$('morphHeal').value} px`;
+      if ($('source').value === 'image' && imageBitmap) {
+        try { runUploadedImageExtraction(); } catch (e) { $('imageStatus').textContent = e.message; }
+      }
+    });
+  });
+
+  // High-Resolution Typography Extraction (Contour or Centerline Skeleton)
+  function runTextExtraction() {
+    const text = $('textInput').value.trim();
+    if (!text) throw new Error('Enter at least one character.');
+    currentSourceMode = 'text';
+    $('activeSourceBadge').textContent = `Text: "${text.slice(0, 10)}"`;
+
+    const off = document.createElement('canvas');
+    off.width = 960;
+    off.height = 360;
+    const c = off.getContext('2d', { willReadFrequently: true });
+
+    let size = 210;
+    const fontName = $('font').value;
+    const weight = $('fontWeight').value;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.font = `${weight} ${size}px ${fontName}`;
+    while (c.measureText(text).width > 880 && size > 28) {
+      size -= 6;
+      c.font = `${weight} ${size}px ${fontName}`;
+    }
+
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, off.width, off.height);
+    c.fillStyle = '#000000';
+    c.fillText(text, off.width * 0.5, off.height * 0.52);
+
+    const mode = $('textExtractMode').value;
+    rawStrokes = extractStrokesFromCanvas(off, mode, 145, 'dark', 6, 'manual', 0, false);
+    rebuildFFT(false);
+    $('textStatus').textContent = `Traced "${text}" into ${rawStrokes.length} optimal 2-Opt strokes.`;
+  }
+
+  $('makeText').addEventListener('click', () => {
+    try { runTextExtraction(); } catch (e) { $('textStatus').textContent = e.message; }
+  });
+
+  // ============================================================================
+  // 6. DETERMINISTIC SUB-STEPPED EPICYCLE EVALUATION & CANVAS RENDERER
+  // ============================================================================
+
+  // Evaluate exact Fourier sum at normalized time t in [0, 1]
+  function evaluateEpicyclesAt(t, termCount) {
+    let re = 0, im = 0;
+    for (let i = 0; i < termCount; i++) {
+      const q = coeff[i];
+      const ang = TAU * q.freq * t + q.phase;
+      re += q.amp * Math.cos(ang);
+      im += q.amp * Math.sin(ang);
+    }
+    // Check if the nearest original sample was a pen-up bridge
+    const sampleIdx = ((Math.floor(t * N) % N) + N) % N;
+    const isBridge = normalizedSamples[sampleIdx] ? normalizedSamples[sampleIdx].bridge : false;
+    return { re, im, bridge: isBridge, t };
+  }
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width;
+    H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawGrid() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(110,145,190,0.08)';
+    ctx.lineWidth = 1;
+    for (let x = (W / 2) % 32; x < W; x += 32) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = (H / 2) % 32; y < H; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(150,180,220,0.16)';
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H);
+    ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw procedural mechanical gear with involute-like teeth, inner hub, and rotating spokes
+  function drawMechanicalGear(targetCtx, cx, cy, radius, rotationAngle, index, totalCount, alphaMul, useRainbow) {
+    const strokeCol = useRainbow
+      ? `hsla(${(index * 28 + rotationAngle * 180 / Math.PI) % 360}, 92%, 65%, ${alphaMul})`
+      : (index < 6 ? `rgba(83,229,255,${alphaMul})` : `rgba(96,195,245,${alphaMul * 0.55})`);
+
+    if (radius < 4.5) {
+      targetCtx.beginPath();
+      targetCtx.arc(cx, cy, radius, 0, TAU);
+      targetCtx.strokeStyle = strokeCol;
+      targetCtx.lineWidth = 1;
+      targetCtx.stroke();
+      return;
+    }
+
+    // Number of teeth proportional to radius
+    const teeth = Math.max(8, Math.min(42, Math.round(radius * 0.52)));
+    const toothDepth = Math.min(5.5, Math.max(1.8, radius * 0.11));
+    const rOuter = radius + toothDepth * 0.55;
+    const rInner = Math.max(1.5, radius - toothDepth * 0.45);
+    const step = TAU / teeth;
+
+    targetCtx.save();
+    targetCtx.translate(cx, cy);
+    targetCtx.rotate(rotationAngle);
+
+    // Outer gear teeth profile
+    targetCtx.beginPath();
+    for (let t = 0; t < teeth; t++) {
+      const a0 = t * step;
+      const a1 = a0 + step * 0.18;
+      const a2 = a0 + step * 0.45;
+      const a3 = a0 + step * 0.63;
+      if (t === 0) targetCtx.moveTo(rInner * Math.cos(a0), rInner * Math.sin(a0));
+      else targetCtx.lineTo(rInner * Math.cos(a0), rInner * Math.sin(a0));
+      targetCtx.lineTo(rOuter * Math.cos(a1), rOuter * Math.sin(a1));
+      targetCtx.lineTo(rOuter * Math.cos(a2), rOuter * Math.sin(a2));
+      targetCtx.lineTo(rInner * Math.cos(a3), rInner * Math.sin(a3));
+    }
+    targetCtx.closePath();
+    targetCtx.strokeStyle = strokeCol;
+    targetCtx.lineWidth = index < 5 ? 1.35 : 0.95;
+    targetCtx.stroke();
+
+    // Subtle pitch circle & inner hub
+    if (radius > 12) {
+      const hubR = radius * 0.24;
+      targetCtx.beginPath();
+      targetCtx.arc(0, 0, hubR, 0, TAU);
+      targetCtx.strokeStyle = useRainbow ? strokeCol : `rgba(167,139,250,${alphaMul * 0.6})`;
+      targetCtx.lineWidth = 0.9;
+      targetCtx.stroke();
+
+      // Radial gear spokes
+      const spokes = radius > 34 ? 5 : 3;
+      targetCtx.beginPath();
+      for (let s = 0; s < spokes; s++) {
+        const sa = (s * TAU) / spokes;
+        targetCtx.moveTo(hubR * Math.cos(sa), hubR * Math.sin(sa));
+        targetCtx.lineTo(rInner * 0.92 * Math.cos(sa), rInner * 0.92 * Math.sin(sa));
+      }
+      targetCtx.strokeStyle = `rgba(83,229,255,${alphaMul * 0.32})`;
+      targetCtx.lineWidth = 0.85;
+      targetCtx.stroke();
+    }
+
+    targetCtx.restore();
+  }
+
+
+  // Cinematic procedural wallpaper backgrounds. All effects are deterministic
+  // functions of normalized Fourier time, so video/HTML exports loop seamlessly.
+  function drawWallpaperBackground(g, w, h, t) {
+    const style = $('wallpaperStyle')?.value || 'aurora';
+    const strength = Math.max(0, Math.min(1, Number($('wallpaperStrength')?.value ?? 75) / 100));
+    const phase = t * Math.PI * 2;
+    const gradient = (c1, c2, c3) => {
+      const gr = g.createLinearGradient(0, 0, w, h);
+      gr.addColorStop(0, c1); gr.addColorStop(.55, c2); gr.addColorStop(1, c3);
+      return gr;
+    };
+    g.save();
+    g.fillStyle = '#030611';
+    g.fillRect(0, 0, w, h);
+
+    if (style === 'black') {
+      g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+    } else if (style === 'minimal') {
+      const gr = g.createRadialGradient(w*.5,h*.45,10,w*.5,h*.5,Math.max(w,h)*.8);
+      gr.addColorStop(0, '#20314b'); gr.addColorStop(.55, '#101827'); gr.addColorStop(1, '#05070d');
+      g.fillStyle=gr; g.fillRect(0,0,w,h);
+    } else if (style === 'sunset') {
+      g.fillStyle=gradient('#170d35','#a13c62','#f5a35b'); g.fillRect(0,0,w,h);
+      const sunY=h*(.43+Math.sin(phase)*.025), sunR=Math.min(w,h)*.18;
+      const sg=g.createRadialGradient(w*.5,sunY,2,w*.5,sunY,sunR*1.6);
+      sg.addColorStop(0,'rgba(255,245,190,.95)');sg.addColorStop(.45,'rgba(255,164,104,.6)');sg.addColorStop(1,'rgba(255,100,120,0)');
+      g.fillStyle=sg;g.fillRect(0,0,w,h);
+      g.fillStyle='rgba(9,10,25,.55)';g.fillRect(0,h*.68,w,h*.32);
+      for(let k=0;k<7;k++){const y=h*(.69+k*.045);g.fillStyle=`rgba(255,190,140,${.12*(1-k/8)})`;g.fillRect(0,y,w,Math.max(1,h*.004));}
+    } else if (style === 'synthwave') {
+      g.fillStyle=gradient('#100b31','#3b1455','#080d1b');g.fillRect(0,0,w,h);
+      const horizon=h*.62, sunR=Math.min(w,h)*.2;
+      const sg=g.createRadialGradient(w*.5,h*.4,1,w*.5,h*.4,sunR*1.5);
+      sg.addColorStop(0,'rgba(255,118,190,.95)');sg.addColorStop(1,'rgba(255,80,150,0)');
+      g.fillStyle=sg;g.fillRect(0,0,w,h);
+      g.save();g.strokeStyle=`rgba(75,220,255,${.16*strength})`;g.lineWidth=Math.max(1,w/1200);
+      for(let i=0;i<12;i++){const yy=horizon+Math.pow(i/11,1.7)*h*.38;g.beginPath();g.moveTo(0,yy);g.lineTo(w,yy);g.stroke();}
+      for(let i=-8;i<=8;i++){g.beginPath();g.moveTo(w*.5,horizon);g.lineTo(w*.5+i*w*.12,h);g.stroke();}
+      g.restore();
+    } else if (style === 'ocean') {
+      g.fillStyle=gradient('#031326','#07506a','#020a1b');g.fillRect(0,0,w,h);
+      for(let i=0;i<22;i++){
+        const y=h*(.28+i*.035)+Math.sin(phase*1.4+i*.8)*h*.012;
+        g.beginPath();g.moveTo(0,y);
+        for(let x=0;x<=w;x+=Math.max(12,w/90))g.lineTo(x,y+Math.sin(x/w*8+phase+i*.45)*h*.012);
+        g.strokeStyle=`rgba(65,220,235,${strength*.10})`;g.lineWidth=Math.max(1,h*.0015);g.stroke();
+      }
+    } else if (style === 'matrix') {
+      g.fillStyle='#010805';g.fillRect(0,0,w,h);
+      g.font=`${Math.max(10,Math.floor(w/75))}px monospace`;
+      const cols=Math.ceil(w/22);
+      for(let i=0;i<cols;i++){
+        const x=i*22, y=((i*73+phase*90)%(h+220))-100;
+        for(let j=0;j<9;j++){
+          const yy=y-j*22; if(yy<0||yy>h)continue;
+          g.fillStyle=`rgba(40,255,130,${strength*(.035+(9-j)*.012)})`;
+          g.fillText(((i*17+j*31)%2)?'1':'0',x,yy);
+        }
+      }
+    } else {
+      // Aurora, nebula and starfield share a cinematic deep-space base.
+      const base = style==='nebula' ? ['#08051e','#35104f','#050916'] :
+                   style==='stars' ? ['#02040d','#07152d','#010208'] :
+                   ['#031126','#071d38','#020713'];
+      g.fillStyle=gradient(...base);g.fillRect(0,0,w,h);
+      if(style==='aurora' || style==='nebula'){
+        for(let band=0;band<5;band++){
+          const x=w*(.12+band*.19)+Math.sin(phase+band*1.7)*w*.07;
+          const y=h*(.25+(band%3)*.18);
+          const rad=Math.max(w,h)*(.28+band*.025);
+          const rg=g.createRadialGradient(x,y,1,x,y,rad);
+          const hue=style==='nebula' ? (265+band*17) : (145+band*24);
+          rg.addColorStop(0,`hsla(${hue},95%,62%,${strength*(style==='nebula'?.18:.15)})`);
+          rg.addColorStop(.45,`hsla(${hue+30},90%,48%,${strength*.07})`);
+          rg.addColorStop(1,'rgba(0,0,0,0)');
+          g.fillStyle=rg;g.fillRect(0,0,w,h);
+        }
+        if(style==='aurora'){
+          g.save();g.globalCompositeOperation='screen';
+          for(let ribbon=0;ribbon<4;ribbon++){
+            g.beginPath();
+            for(let x=0;x<=w;x+=Math.max(8,w/100)){
+              const y=h*(.22+ribbon*.105)+Math.sin(x/w*5+phase*1.1+ribbon)*h*.065+Math.sin(x/w*11-phase*.6)*h*.018;
+              x===0?g.moveTo(x,y):g.lineTo(x,y);
+            }
+            g.strokeStyle=`hsla(${145+ribbon*24},100%,68%,${strength*.20})`;
+            g.lineWidth=h*(.025+ribbon*.004);g.shadowColor='#55ffd2';g.shadowBlur=h*.035;g.stroke();
+          }
+          g.restore();
+        }
+      }
+      // Star particles drift by a full periodic phase; same first/last frame.
+      const starCount=Math.floor(Math.min(260, w*h/8500));
+      for(let i=0;i<starCount;i++){
+        const seed=i*127.1+19.7;
+        const sx=((Math.sin(seed*12.9898)*43758.5453)%1+1)%1*w;
+        const sy=((Math.sin(seed*78.233)*19341.713)%1+1)%1*h;
+        const drift=Math.sin(phase+seed)*Math.min(18,w*.012);
+        const twinkle=.35+.65*(.5+.5*Math.sin(phase*2+seed));
+        g.beginPath();g.arc((sx+drift+w)%w,sy,Math.max(.5,w/2200),0,Math.PI*2);
+        g.fillStyle=`rgba(220,238,255,${strength*.45*twinkle})`;g.fill();
+      }
+    }
+    // Cinematic vignette to keep the Fourier artwork legible.
+    const vg=g.createRadialGradient(w*.5,h*.48,Math.min(w,h)*.18,w*.5,h*.5,Math.max(w,h)*.72);
+    vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,`rgba(0,0,0,${.48*strength})`);
+    g.fillStyle=vg;g.fillRect(0,0,w,h);
+    g.restore();
+  }
+
+
+  function depthForCurve(t, mode, depth, xy) {
+    const a = TAU * t;
+    if (mode === 'helix') return Math.sin(a * 3) * depth;
+    if (mode === 'torus') return (0.58 * Math.sin(3 * a) + 0.28 * Math.sin(7 * a)) * depth;
+    if (mode === 'wave') return (0.72 * Math.sin(5 * a + 0.7) + 0.28 * Math.cos(11 * a)) * depth;
+    if (mode === 'fold') return (0.7 * Math.sin(2 * a) * Math.cos(5 * a) + 0.22 * Math.sin(13 * a)) * depth;
+    return 0;
+  }
+
+  function projectFourier3D(point, t, w, h, mode, yaw, pitch, depth) {
+    const x = point.re, y = point.im;
+    const z = depthForCurve(t, mode, depth, point);
+    const cy = Math.cos(yaw), sy = Math.sin(yaw);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const xr = x * cy - z * sy;
+    const zr = x * sy + z * cy;
+    const yr = y * cp - zr * sp;
+    const zz = y * sp + zr * cp;
+    const perspective = 2.8 / (2.8 + zz * 0.55);
+    const scale = Math.min(w, h) * 0.34 * Number($('scale').value) / 100;
+    return { x: w * 0.5 + xr * scale * perspective, y: h * 0.5 - yr * scale * perspective, z: zz, perspective };
+  }
+
+  function renderThreeDScene(targetCtx, w, h, currentTime, currentTrace, transparent) {
+    const mode = $('threeDMode').value;
+    const yaw = Number($('threeDYaw').value) * Math.PI / 180;
+    const pitch = Number($('threeDPitch').value) * Math.PI / 180;
+    const depth = Number($('threeDDepth').value) / 100;
+    const count = Math.min(Number($('terms').value), coeff.length);
+    targetCtx.save();
+    // A faint perspective floor grid makes depth and orientation legible.
+    if (!transparent) {
+      targetCtx.strokeStyle = 'rgba(112,145,190,.16)';
+      targetCtx.lineWidth = 1;
+      const cx=w/2, cy=h/2, floorY=h*.78;
+      for(let i=-5;i<=5;i++){
+        const x=cx+i*w*.075;
+        targetCtx.beginPath();targetCtx.moveTo(cx+(x-cx)*.2,cy+h*.02);targetCtx.lineTo(x,floorY);targetCtx.stroke();
+      }
+      for(let j=0;j<7;j++){
+        const yy=cy+h*.08+j*h*.095;
+        targetCtx.beginPath();targetCtx.moveTo(w*.16,yy);targetCtx.lineTo(w*.84,yy);targetCtx.stroke();
+      }
+    }
+
+    // Draw the complete reconstructed 3D path as a dim reference, then the live trace.
+    const total=Math.max(512,Math.min(2048,N));
+    targetCtx.beginPath();
+    for(let i=0;i<=total;i++){
+      const t=i/total, p=projectFourier3D(evaluateEpicyclesAt(t,count),t,w,h,mode,yaw,pitch,depth);
+      if(i===0)targetCtx.moveTo(p.x,p.y);else targetCtx.lineTo(p.x,p.y);
+    }
+    targetCtx.strokeStyle='rgba(148,163,184,.25)';
+    targetCtx.lineWidth=1.15;
+    targetCtx.stroke();
+
+    if(currentTrace.length>1){
+      for(let i=1;i<currentTrace.length;i+=5){
+        const end=Math.min(currentTrace.length-1,i+4);
+        const p0=currentTrace[i-1], t0=p0.t ?? (i-1)/currentTrace.length;
+        const a=projectFourier3D(p0,t0,w,h,mode,yaw,pitch,depth);
+        const p1=currentTrace[end], t1=p1.t ?? end/currentTrace.length;
+        const b=projectFourier3D(p1,t1,w,h,mode,yaw,pitch,depth);
+        const hue=$('rainbowTrace').checked ? (t1*360+repeatIndex*60)%360 : null;
+        const color=hue===null?($('cycleColors').checked?repeatPalette[repeatIndex%repeatPalette.length]:'#ff6fae'):`hsl(${hue},96%,62%)`;
+        targetCtx.beginPath();targetCtx.moveTo(a.x,a.y);targetCtx.lineTo(b.x,b.y);
+        targetCtx.strokeStyle=currentTrace[end].bridge&&$('dimBridges').checked?'rgba(148,163,184,.22)':color;
+        targetCtx.lineWidth=2.5;
+        if(!transparent){targetCtx.shadowColor=color;targetCtx.shadowBlur=8;}
+        targetCtx.stroke();
+      }
+    }
+
+    const tip=projectFourier3D(evaluateEpicyclesAt(currentTime,count),currentTime,w,h,mode,yaw,pitch,depth);
+    targetCtx.shadowBlur=transparent?0:14;
+    targetCtx.shadowColor='#53e5ff';
+    targetCtx.fillStyle='#e9d5ff';
+    targetCtx.beginPath();targetCtx.arc(tip.x,tip.y,5,0,TAU);targetCtx.fill();
+    targetCtx.shadowBlur=0;
+
+    // Orientation axes.
+    const axisLen=Math.min(w,h)*.12;
+    const axes=[{x:1,y:0,z:0,c:'#ff6fae'},{x:0,y:1,z:0,c:'#53e5ff'},{x:0,y:0,z:1,c:'#a78bfa'}];
+    for(const ax of axes){
+      const p=projectFourier3D({re:0,im:0},0,w,h,mode,yaw,pitch,0);
+      const q=projectFourier3D({re:ax.x*axisLen/Math.min(w,h)/.34,im:ax.y*axisLen/Math.min(w,h)/.34},0,w,h,mode,yaw,pitch,ax.z*axisLen/Math.min(w,h)/.34);
+      targetCtx.beginPath();targetCtx.moveTo(p.x,p.y);targetCtx.lineTo(q.x,q.y);
+      targetCtx.strokeStyle=ax.c;targetCtx.lineWidth=2;targetCtx.stroke();
+    }
+    targetCtx.restore();
+  }
+
+
+  // ============================================================================
+  // THREE.JS LIVE 3D STUDIO — WebGL curve, real perspective and epicycle wheels
+  // ============================================================================
+  let threeRenderer = null, threeScene = null, threeCamera = null, threeRoot = null;
+  let threeCurve = null, threeTrail = null, threeWheelObjects = [];
+  let threeTip = null, threeResizeObserver = null, threeZWheelTerms = [];
+  let threePathKey = '', threeWheelCount = -1, threeDragging = false, threeInitFailed = false;
+  let threePointer = null, threeSpherical = { theta: 0.62, phi: 1.18, radius: 7.2 };
+  let threeLastPointer = { x: 0, y: 0 };
+
+  function threeModeActive() {
+    return !!(window.THREE && $('threeDMode') && $('threeDMode').value !== 'off');
+  }
+
+  function initThreeStudio() {
+    if (!window.THREE || threeRenderer || threeInitFailed) return;
+    const wrap = document.querySelector('.canvas-wrap');
+    if (!wrap) return;
+    const overlay = document.createElement('canvas');
+    overlay.className = 'three-overlay';
+    overlay.id = 'threeWebGL';
+    overlay.setAttribute('aria-label', 'Interactive Three.js 3D Fourier scene');
+    wrap.insertBefore(overlay, wrap.querySelector('.hud-overlay'));
+    overlay.addEventListener('webglcontextlost', e => {
+      e.preventDefault();
+      threeInitFailed = true;
+      if (threeRenderer) { try { threeRenderer.dispose(); } catch (_) {} }
+      threeRenderer = null;
+      wrap.classList.remove('three-active');
+      $('imageStatus').textContent = 'WebGL context was lost. The 2D Fourier renderer is active as a fallback.';
+    });
+
+    try {
+      threeRenderer = new THREE.WebGLRenderer({ canvas: overlay, alpha: true, antialias: true, powerPreference: 'high-performance' });
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      threeRenderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+      threeRenderer.setClearColor(0x000000, 0);
+      if ('outputColorSpace' in threeRenderer) threeRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      threeScene = new THREE.Scene();
+      threeCamera = new THREE.PerspectiveCamera(42, wrap.clientWidth / Math.max(1, wrap.clientHeight), 0.01, 100);
+      threeRoot = new THREE.Group();
+      threeScene.add(threeRoot);
+
+      threeScene.add(new THREE.AmbientLight(0xffffff, 1.35));
+      const keyLight = new THREE.PointLight(0x77dfff, 2.2, 30);
+      keyLight.position.set(3, 4, 5);
+      threeScene.add(keyLight);
+      const rimLight = new THREE.PointLight(0xc084fc, 1.5, 30);
+      rimLight.position.set(-4, -2, -3);
+      threeScene.add(rimLight);
+
+      const grid = new THREE.GridHelper(9, 18, 0x36516f, 0x203047);
+      grid.position.y = -1.75;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.35;
+      threeRoot.add(grid);
+      const axes = new THREE.AxesHelper(1.25);
+      axes.material.transparent = true;
+      axes.material.opacity = 0.75;
+      threeRoot.add(axes);
+
+      threeUnitCircle = [];
+      for (let i = 0; i < 72; i++) {
+        const a = Math.PI * 2 * i / 72;
+        threeUnitCircle.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0));
+      }
+
+      const curveMat = new THREE.LineBasicMaterial({ color: 0x9aa9c3, transparent: true, opacity: 0.46 });
+      threeCurve = new THREE.Line(new THREE.BufferGeometry(), curveMat);
+      threeRoot.add(threeCurve);
+
+      const trailMat = new THREE.LineBasicMaterial({ color: 0xff6fae, transparent: true, opacity: 0.98 });
+      threeTrail = new THREE.Line(new THREE.BufferGeometry(), trailMat);
+      threeRoot.add(threeTrail);
+
+      const tipGeo = new THREE.SphereGeometry(0.055, 16, 12);
+      const tipMat = new THREE.MeshStandardMaterial({ color: 0xe9d5ff, emissive: 0x6d28d9, emissiveIntensity: 1.6, metalness: 0.18, roughness: 0.25 });
+      threeTip = new THREE.Mesh(tipGeo, tipMat);
+      threeRoot.add(threeTip);
+
+      const glow = new THREE.PointLight(0x53e5ff, 1.1, 2);
+      threeTip.add(glow);
+
+      overlay.addEventListener('pointerdown', e => {
+        threeDragging = true;
+        threePointer = e.pointerId;
+        threeLastPointer = { x: e.clientX, y: e.clientY };
+        overlay.setPointerCapture(e.pointerId);
+      });
+      overlay.addEventListener('pointermove', e => {
+        if (!threeDragging || e.pointerId !== threePointer) return;
+        const dx = e.clientX - threeLastPointer.x, dy = e.clientY - threeLastPointer.y;
+        threeLastPointer = { x: e.clientX, y: e.clientY };
+        threeSpherical.theta -= dx * 0.008;
+        threeSpherical.phi = Math.max(0.12, Math.min(Math.PI - 0.12, threeSpherical.phi + dy * 0.008));
+        updateThreeCamera();
+      });
+      const endDrag = e => {
+        if (e.pointerId === threePointer) threeDragging = false;
+      };
+      overlay.addEventListener('pointerup', endDrag);
+      overlay.addEventListener('pointercancel', endDrag);
+      overlay.addEventListener('wheel', e => {
+        e.preventDefault();
+        threeSpherical.radius = Math.max(3.0, Math.min(15, threeSpherical.radius * (e.deltaY > 0 ? 1.08 : 0.92)));
+        updateThreeCamera();
+      }, { passive: false });
+
+      threeResizeObserver = new ResizeObserver(() => {
+        if (!threeRenderer) return;
+        const w = wrap.clientWidth, h = wrap.clientHeight;
+        threeRenderer.setSize(w, h, false);
+        threeCamera.aspect = w / Math.max(1, h);
+        threeCamera.updateProjectionMatrix();
+      });
+      threeResizeObserver.observe(wrap);
+      updateThreeCamera();
+    } catch (err) {
+      console.warn('Three.js initialization failed; the 2D Fourier renderer remains available.', err);
+      if (threeRenderer) threeRenderer.dispose();
+      threeRenderer = null;
+      threeInitFailed = true;
+      overlay.remove();
+      wrap.classList.remove('three-active');
+      $('imageStatus').textContent = 'WebGL could not initialize. Use the 2D Fourier view or enable WebGL in this browser.';
+    }
+  }
+
+  function updateThreeCamera() {
+    if (!threeCamera) return;
+    const r = threeSpherical.radius, p = threeSpherical.phi, t = threeSpherical.theta;
+    threeCamera.position.set(r * Math.sin(p) * Math.sin(t), r * Math.cos(p), r * Math.sin(p) * Math.cos(t));
+    threeCamera.lookAt(0, 0, 0);
+  }
+
+  function disposeThreeWheels() {
+    for (const w of threeWheelObjects) {
+      threeRoot.remove(w.ring);
+      threeRoot.remove(w.vector);
+      threeRoot.remove(w.hub);
+      w.ring.geometry.dispose();
+      w.ring.material.dispose();
+      w.vector.geometry.dispose();
+      w.vector.material.dispose();
+      w.hub.geometry.dispose();
+      w.hub.material.dispose();
+    }
+    threeWheelObjects = [];
+    threeWheelCount = -1;
+  }
+
+  function buildThreeWheels(count) {
+    if (threeWheelCount === count) return;
+    disposeThreeWheels();
+    const visibleCount = Math.min(count, 120);
+    for (let i = 0; i < visibleCount; i++) {
+      const hue = (190 + i * 2.35) % 360;
+      const positions = new Float32Array(73 * 3);
+      const ringGeo = new THREE.BufferGeometry();
+      ringGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const ringMat = new THREE.LineBasicMaterial({
+        color: new THREE.Color(`hsl(${hue},88%,66%)`),
+        transparent: true,
+        opacity: Math.max(0.16, 0.7 - i / visibleCount * 0.42)
+      });
+      const ring = new THREE.LineLoop(ringGeo, ringMat);
+      threeRoot.add(ring);
+
+      const vectorGeo = new THREE.BufferGeometry();
+      vectorGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const vectorMat = new THREE.LineBasicMaterial({
+        color: new THREE.Color(`hsl(${hue},95%,72%)`),
+        transparent: true, opacity: 0.92
+      });
+      const vector = new THREE.Line(vectorGeo, vectorMat);
+      threeRoot.add(vector);
+
+      const hub = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 8, 6),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(`hsl(${hue},95%,75%)`), transparent: true, opacity: 0.9 })
+      );
+      threeRoot.add(hub);
+      threeWheelObjects.push({ ring, vector, hub, positions });
+    }
+    threeWheelCount = count;
+    threeZWheelTerms = [];
+  }
+
+  // Discrete Fourier coefficients for the selected depth profile. Positive
+  // frequencies carry the real-valued z signal; negative partners are skipped
+  // to avoid counting the real signal twice.
+  function calculateThreeDepthTerms(count) {
+    const sampleCount = Math.max(1024, Math.min(4096, N));
+    const zSamples = new Float64Array(sampleCount);
+    for (let j = 0; j < sampleCount; j++) zSamples[j] = threeDepthAt(j / sampleCount);
+    const result = new Array(count);
+    for (let i = 0; i < count; i++) {
+      const k = coeff[i].freq;
+      if (k < 0) { result[i] = { amp: 0, phase: 0 }; continue; }
+      let re = 0, im = 0;
+      for (let j = 0; j < sampleCount; j++) {
+        const a = TAU * k * j / sampleCount;
+        re += zSamples[j] * Math.cos(a);
+        im -= zSamples[j] * Math.sin(a);
+      }
+      re /= sampleCount; im /= sampleCount;
+      result[i] = {
+        amp: (k === 0 ? 1 : 2) * Math.hypot(re, im),
+        phase: Math.atan2(im, re)
+      };
+    }
+    return result;
+  }
+
+  function threeDepthAt(t) {
+    const mode = $('threeDMode').value;
+    const depth = Number($('threeDDepth').value) / 100;
+    return depthForCurve(t, mode, depth) * 1.25;
+  }
+
+  function updateThreeStaticPath(count) {
+    const mode = $('threeDMode').value;
+    let signature = 0;
+    for (let i = 0; i < count; i++) {
+      const q = coeff[i];
+      signature += (i + 1) * (q.amp * 0.731 + q.phase * 0.193 + q.freq * 0.017);
+    }
+    const key = `${N}:${coeff.length}:${count}:${mode}:${$('threeDDepth').value}:${signature.toFixed(7)}`;
+    if (key === threePathKey || !threeCurve) return;
+    const pts = [];
+    const samples = 720;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const p = evaluateEpicyclesAt(t, count);
+      pts.push(new THREE.Vector3(p.re * 2.25, p.im * 2.25, threeDepthAt(t)));
+    }
+    threeCurve.geometry.dispose();    threeCurve.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+    threePathKey = key;
+  }
+
+  function renderThreeJsFrame(currentTime, currentTrace) {
+    if (!threeRenderer) initThreeStudio();
+    if (!threeRenderer) return;
+    const wrap = document.querySelector('.canvas-wrap');
+    const active = threeModeActive();
+    wrap.classList.toggle('three-active', active);
+    if (!active) {
+      threeRenderer.clear();
+      return;
+    }
+    if (!coeff.length) {
+      threeRenderer.render(threeScene, threeCamera);
+      return;
+    }
+
+    const count = Math.min(Number($('terms').value), coeff.length);
+    buildThreeWheels(count);
+    updateThreeStaticPath(count);
+    const zKey = `${count}:${$('threeDMode').value}:${$('threeDDepth').value}:${N}`;
+    if (threeZWheelTerms._key !== zKey) {
+      threeZWheelTerms = calculateThreeDepthTerms(count);
+      threeZWheelTerms._key = zKey;
+    }
+
+    // Dynamic trail in genuine 3D coordinates.
+    const trailPoints = [];
+    const stride = Math.max(1, Math.ceil(currentTrace.length / 1800));
+    for (let i = 0; i < currentTrace.length; i += stride) {
+      const p = currentTrace[i], t = p.t ?? i / Math.max(1, currentTrace.length);
+      trailPoints.push(new THREE.Vector3(p.re * 2.25, p.im * 2.25, threeDepthAt(t)));
+    }
+    if (trailPoints.length > 1) {
+      threeTrail.geometry.dispose();
+      threeTrail.geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+      threeTrail.visible = true;
+    } else threeTrail.visible = false;
+
+    // True 3D Fourier chain: each wheel is a tilted ellipse in XYZ space.
+    // Its endpoint is accumulated into the next wheel, exactly as in 2D.
+    let re = 0, im = 0, z = 0;
+    for (let i = 0; i < threeWheelObjects.length; i++) {
+      const q = coeff[i];
+      const a = TAU * q.freq * currentTime + q.phase;
+      const zTerm = threeZWheelTerms[i] || { amp: 0, phase: 0 };
+      const nextRe = re + q.amp * Math.cos(a);
+      const nextIm = im + q.amp * Math.sin(a);
+      const nextZ = z + zTerm.amp * Math.cos(TAU * q.freq * currentTime + zTerm.phase);
+      const obj = threeWheelObjects[i];
+      const pos = obj.positions;
+      for (let j = 0; j <= 72; j++) {
+        const theta = TAU * j / 72 + a;
+        pos[j * 3] = (re + q.amp * Math.cos(theta)) * 2.25;
+        pos[j * 3 + 1] = (im + q.amp * Math.sin(theta)) * 2.25;
+        pos[j * 3 + 2] = (z + zTerm.amp * Math.cos(theta + zTerm.phase - q.phase)) * 2.25;
+      }
+      obj.ring.geometry.attributes.position.needsUpdate = true;
+      obj.ring.geometry.computeBoundingSphere();
+      const vectorPos = obj.vector.geometry.attributes.position;
+      vectorPos.setXYZ(0, re * 2.25, im * 2.25, z * 2.25);
+      vectorPos.setXYZ(1, nextRe * 2.25, nextIm * 2.25, nextZ * 2.25);
+      vectorPos.needsUpdate = true;
+      obj.vector.geometry.computeBoundingSphere();
+      obj.hub.position.set(re * 2.25, im * 2.25, z * 2.25);
+      re = nextRe; im = nextIm; z = nextZ;
+    }
+    threeTip.position.set(re * 2.25, im * 2.25, z * 2.25);
+    // Slider values set the initial camera orientation; pointer orbit remains free.
+    threeRenderer.render(threeScene, threeCamera);
+  }
+
+  // Unified scene renderer used by both the live canvas and the GIF exporter
+  function renderSceneToContext(targetCtx, w, h, currentTime, currentTrace, opts = {}) {
+    const {
+      transparent = $('transparentBg').checked,
+      drawBgFill = !transparent,
+      showEpicycles = true,
+      showGridLines = !transparent
+    } = opts;
+
+    targetCtx.clearRect(0, 0, w, h);
+
+    if (drawBgFill) {
+      drawWallpaperBackground(targetCtx, w, h, currentTime);
+    }
+
+    if (!coeff.length) return;
+
+    if ($('threeDMode') && $('threeDMode').value !== 'off' && (!window.THREE || threeInitFailed)) {
+      renderThreeDScene(targetCtx, w, h, currentTime, currentTrace, transparent);
+      return;
+    }
+
+    if (showGridLines) {
+      targetCtx.save();
+      targetCtx.strokeStyle = 'rgba(110,145,190,0.08)';
+      targetCtx.lineWidth = 1;
+      for (let x = (w / 2) % 32; x < w; x += 32) {
+        targetCtx.beginPath(); targetCtx.moveTo(x, 0); targetCtx.lineTo(x, h); targetCtx.stroke();
+      }
+      for (let y = (h / 2) % 32; y < h; y += 32) {
+        targetCtx.beginPath(); targetCtx.moveTo(0, y); targetCtx.lineTo(w, y); targetCtx.stroke();
+      }
+      targetCtx.strokeStyle = 'rgba(150,180,220,0.16)';
+      targetCtx.beginPath();
+      targetCtx.moveTo(w / 2, 0); targetCtx.lineTo(w / 2, h);
+      targetCtx.moveTo(0, h / 2); targetCtx.lineTo(w, h / 2);
+      targetCtx.stroke();
+      targetCtx.restore();
+    }
+
+    // Rotate the complete graph around the canvas center. Background and grid stay upright.
+    const orientationDeg = Math.max(0, Math.min(359, Number($('orientation')?.value || 0)));
+    targetCtx.save();
+    targetCtx.translate(w * 0.5, h * 0.5);
+    targetCtx.rotate(orientationDeg * Math.PI / 180);
+    targetCtx.translate(-w * 0.5, -h * 0.5);
+
+    const count = Math.min(Number($('terms').value), coeff.length);
+    const scale = Math.min(w, h) * 0.37 * (Number($('scale').value) / 100);
+    const origin = { x: w * 0.5, y: h * 0.5 };
+
+    // Optional Ghost Target Path
+    if ($('showGhost').checked && normalizedSamples.length >= 2) {
+      targetCtx.save();
+      targetCtx.lineWidth = 1.4;
+      for (let i = 1; i < normalizedSamples.length; i++) {
+        const p0 = normalizedSamples[i - 1], p1 = normalizedSamples[i];
+        if (p1.bridge) continue;
+        targetCtx.beginPath();
+        targetCtx.moveTo(origin.x + p0.x * scale, origin.y - p0.y * scale);
+        targetCtx.lineTo(origin.x + p1.x * scale, origin.y - p1.y * scale);
+        targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        targetCtx.stroke();
+      }
+      targetCtx.restore();
+    }
+
+    // 1. Evaluate & Optionally Draw Epicycle Chain & Mechanical Gears
+    let zRe = 0, zIm = 0;
+    let prev = origin;
+    const showGears = $('gearCircles').checked;
+    const gearStyle = $('gearStyle').value;
+    const baseOpacity = (Number($('circleOpacity').value) / 100) * ($('ghostCircles').checked ? 0.35 : 1.0);
+    const rainbowGears = $('rainbowGears').checked;
+
+    for (let i = 0; i < count; i++) {
+      const q = coeff[i];
+      const ang = TAU * q.freq * currentTime + q.phase;
+      zRe += q.amp * Math.cos(ang);
+      zIm += q.amp * Math.sin(ang);
+
+      const end = { x: origin.x + zRe * scale, y: origin.y - zIm * scale };
+      const radius = q.amp * scale;
+
+      if (showEpicycles) {
+        if (showGears && radius > 0.6) {
+          if (gearStyle === 'gears') {
+            drawMechanicalGear(targetCtx, prev.x, prev.y, radius, -ang, i, count, baseOpacity * 0.55, rainbowGears);
+          } else if (gearStyle === 'satellites') {
+            targetCtx.beginPath();
+            targetCtx.arc(prev.x, prev.y, radius, 0, TAU);
+            targetCtx.strokeStyle = rainbowGears
+              ? `hsla(${(i * 25 + currentTime * 360) % 360}, 90%, 62%, ${baseOpacity * 0.38})`
+              : `rgba(83,229,255,${baseOpacity * (i < 6 ? 0.38 : 0.16)})`;
+            targetCtx.lineWidth = 1;
+            targetCtx.stroke();
+            if (radius > 3.5) {
+              targetCtx.beginPath();
+              targetCtx.arc(end.x, end.y, Math.min(3.2, Math.max(1.5, radius * 0.08)), 0, TAU);
+              targetCtx.fillStyle = `rgba(167,139,250,${baseOpacity * 0.85})`;
+              targetCtx.fill();
+            }
+          } else {
+            targetCtx.beginPath();
+            targetCtx.arc(prev.x, prev.y, radius, 0, TAU);
+            targetCtx.strokeStyle = rainbowGears
+              ? `hsla(${(i * 25 + currentTime * 360) % 360}, 90%, 62%, ${baseOpacity * 0.42})`
+              : `rgba(83,229,255,${baseOpacity * (i < 6 ? 0.42 : 0.15)})`;
+            targetCtx.lineWidth = 1;
+            targetCtx.stroke();
+          }
+        }
+
+        // Phasor vector arm
+        targetCtx.beginPath();
+        targetCtx.moveTo(prev.x, prev.y);
+        targetCtx.lineTo(end.x, end.y);
+        targetCtx.strokeStyle = rainbowGears
+          ? `hsla(${(i * 25 + currentTime * 360) % 360}, 95%, 68%, ${baseOpacity * 0.88})`
+          : (i < 6 ? `rgba(83,229,255,${baseOpacity * 0.9})` : `rgba(130,177,210,${baseOpacity * 0.5})`);
+        targetCtx.lineWidth = i < 6 ? 1.65 : 1;
+        targetCtx.stroke();
+      }
+      prev = end;
+    }
+
+    const endpoint = prev;
+
+    // 2. Render Reconstructed Trace (Rainbow Spectrum or Solid Neon with Dimmed Bridges)
+    const activeColor = $('cycleColors').checked
+      ? repeatPalette[repeatIndex % repeatPalette.length]
+      : '#ff6fae';
+    const dimBridges = $('dimBridges').checked;
+    const useRainbowTrace = $('rainbowTrace').checked;
+
+    if (currentTrace.length > 1) {
+      targetCtx.save();
+      targetCtx.lineJoin = 'round';
+      targetCtx.lineCap = 'round';
+
+      if (useRainbowTrace) {
+        // Draw rainbow spectrum chunks along the trace
+        const chunk = 6;
+        for (let i = 1; i < currentTrace.length; i += chunk) {
+          const endIdx = Math.min(currentTrace.length - 1, i + chunk - 1);
+          const isBr = dimBridges && currentTrace[i].bridge;
+          targetCtx.beginPath();
+          const p0 = currentTrace[i - 1];
+          targetCtx.moveTo(origin.x + p0.re * scale, origin.y - p0.im * scale);
+          for (let k = i; k <= endIdx; k++) {
+            const pk = currentTrace[k];
+            targetCtx.lineTo(origin.x + pk.re * scale, origin.y - pk.im * scale);
+          }
+          if (isBr) {
+            targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+            targetCtx.lineWidth = 1.0;
+            targetCtx.shadowBlur = 0;
+            targetCtx.stroke();
+          } else {
+            const prog = currentTrace[i].t ?? (i / currentTrace.length);
+            const hue = (prog * 360 + repeatIndex * 60) % 360;
+            const col = `hsl(${hue}, 96%, 62%)`;
+            targetCtx.strokeStyle = col;
+            targetCtx.lineWidth = 2.5;
+            if (!transparent) {
+              targetCtx.shadowColor = col;
+              targetCtx.shadowBlur = 9;
+            }
+            targetCtx.stroke();
+          }
+        }
+      } else if (!dimBridges) {
+        targetCtx.beginPath();
+        for (let i = 0; i < currentTrace.length; i++) {
+          const px = origin.x + currentTrace[i].re * scale;
+          const py = origin.y - currentTrace[i].im * scale;
+          if (i === 0) targetCtx.moveTo(px, py);
+          else targetCtx.lineTo(px, py);
+        }
+        targetCtx.strokeStyle = activeColor;
+        targetCtx.lineWidth = 2.4;
+        if (!transparent) {
+          targetCtx.shadowColor = activeColor;
+          targetCtx.shadowBlur = 11;
+        }
+        targetCtx.stroke();
+      } else {
+        let i = 1;
+        while (i < currentTrace.length) {
+          const isBr = currentTrace[i].bridge;
+          targetCtx.beginPath();
+          const pStart = currentTrace[i - 1];
+          targetCtx.moveTo(origin.x + pStart.re * scale, origin.y - pStart.im * scale);
+          while (i < currentTrace.length && currentTrace[i].bridge === isBr) {
+            const p = currentTrace[i];
+            targetCtx.lineTo(origin.x + p.re * scale, origin.y - p.im * scale);
+            i++;
+          }
+          if (isBr) {
+            targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.20)';
+            targetCtx.lineWidth = 1.1;
+            targetCtx.shadowBlur = 0;
+            targetCtx.setLineDash([4, 4]);
+            targetCtx.stroke();
+            targetCtx.setLineDash([]);
+          } else {
+            targetCtx.strokeStyle = activeColor;
+            targetCtx.lineWidth = 2.4;
+            if (!transparent) {
+              targetCtx.shadowColor = activeColor;
+              targetCtx.shadowBlur = 11;
+            }
+            targetCtx.stroke();
+          }
+        }
+      }
+      targetCtx.restore();
+    }
+
+    // Optional high-visibility tracking cursor with crosshair and halo.
+    if ($('showTracker') && $('showTracker').checked) {
+      targetCtx.save();
+      targetCtx.strokeStyle='rgba(83,229,255,.72)';
+      targetCtx.lineWidth=1;
+      targetCtx.setLineDash([3,4]);
+      targetCtx.beginPath();
+      targetCtx.moveTo(endpoint.x-12,endpoint.y);targetCtx.lineTo(endpoint.x+12,endpoint.y);
+      targetCtx.moveTo(endpoint.x,endpoint.y-12);targetCtx.lineTo(endpoint.x,endpoint.y+12);
+      targetCtx.stroke();targetCtx.setLineDash([]);
+      targetCtx.beginPath();targetCtx.arc(endpoint.x,endpoint.y,8,0,TAU);
+      targetCtx.strokeStyle='rgba(167,139,250,.8)';targetCtx.stroke();
+      targetCtx.restore();
+    }
+
+    // 3. Draw glowing tip vector
+    targetCtx.beginPath();
+    targetCtx.arc(endpoint.x, endpoint.y, 4.2, 0, TAU);
+    targetCtx.fillStyle = '#e9d5ff';
+    if (!transparent) {
+      targetCtx.shadowColor = '#a78bfa';
+      targetCtx.shadowBlur = 14;
+    }
+    targetCtx.fill();
+    targetCtx.shadowBlur = 0;
+    targetCtx.restore();
+  }
+
+  // Push deterministic sub-steps between prevTime and nextTime so fast speeds never skip corners
+  function pushSubSteppedTrace(tStart, tEnd, count) {
+    const span = tEnd - tStart;
+    if (span <= 0) return;
+    const minStep = 1 / N;
+    const steps = Math.max(1, Math.min(64, Math.ceil(span / minStep)));
+    for (let s = 1; s <= steps; s++) {
+      const u = (tStart + (span * s) / steps) % 1;
+      trace.push(evaluateEpicyclesAt(u, count));
+      const historyLimit = Math.max(128, Number($('trackWindow')?.value || N));
+      if (trace.length > historyLimit) trace.shift();
+    }
+  }
+
+  function frame(now) {
+    const dt = Math.min((now - lastFrame) / 1000, 0.05) || 0;
+    lastFrame = now;
+
+    const count = Math.min(Number($('terms').value), coeff.length);
+    const scale = Math.min(W, H) * 0.37 * (Number($('scale').value) / 100);
+    const origin = { x: W * 0.5, y: H * 0.5 };
+
+    if (!paused && coeff.length && audioPhaseActive) {
+      const previousTime = time;
+      time = audioPhase;
+      if (time >= previousTime) pushSubSteppedTrace(previousTime, time, count);
+      else {
+        pushSubSteppedTrace(previousTime, 1, count);
+        pushSubSteppedTrace(0, time, count);
+        repeatIndex++;
+      }
+      $('scrubber').value = time.toFixed(4);
+    } else if (!paused && coeff.length) {
+      const advance = dt * 0.11 * Number($('speed').value);
+      const next = time + advance;
+
+      if (oneShot && next >= 1) {
+        pushSubSteppedTrace(time, 1, count);
+        time = 1;
+        paused = true;
+        oneShot = false;
+        $('toggle').textContent = '▶ Play';
+      } else if (next >= 1) {
+        pushSubSteppedTrace(time, next, count);
+        time = next % 1;
+        repeatIndex++;
+      } else {
+        pushSubSteppedTrace(time, next, count);
+        time = next;
+      }
+      $('scrubber').value = time.toFixed(4);
+    }
+
+    const pct = Math.round(time * 100);
+    $('timeLabel').textContent = `T = ${(time * 100).toFixed(1)}%`;
+    $('hudCycle').textContent = `${pct}%`;
+
+    // Ensure at least current tip is shown when scrubbing
+    if (trace.length === 0 && coeff.length) {
+      trace.push(evaluateEpicyclesAt(time, count));
+    }
+
+    renderSceneToContext(ctx, W, H, time, trace, {
+      transparent: $('transparentBg').checked,
+      drawBgFill: !$('transparentBg').checked,
+      showEpicycles: true,
+      showGridLines: !$('transparentBg').checked
+    });
+    renderThreeJsFrame(time, trace);
+
+    $('statPoints').textContent = trace.length;
+    if ($('showTracker').checked) {
+      // Plot refresh is intentionally independent from the animation frame to keep the canvas light.
+    }
+    requestAnimationFrame(frame);
+  }
+
+
+  // EQUATION EXPORT
+  const equationOutput = $('equationOutput');
+  function formatNum(v) { return Number.isFinite(v) ? Number(v.toPrecision(7)).toString() : '0'; }
+  function activeFourierTerms() {
+    const count = Math.max(1, Math.min(Number($('equationTerms').value || $('terms').value), coeff.length));
+    return coeff.slice(0, count);
+  }
+  function makeEquationText() {
+    if (!coeff.length) return '';
+    const terms = activeFourierTerms();
+    const format = $('equationFormat').value;
+    if (format === 'json') {
+      return JSON.stringify({
+        type: 'complex-fourier-parametric-curve',
+        convention: 'z(t) = sum(C_k * exp(i*2*pi*k*t)); t in [0,1)',
+        sampleCount: N,
+        termCount: terms.length,
+        coefficients: terms.map(q => ({frequency:q.freq, real:q.re, imaginary:q.im, amplitude:q.amp, phaseRadians:q.phase}))
+      }, null, 2);
+    }
+    if (format === 'readable') {
+      const ordered = [...terms].sort((a,b) => Math.abs(a.freq)-Math.abs(b.freq) || a.freq-b.freq);
+      const signed = (v) => `${v < 0 ? '−' : '+'} ${formatNum(Math.abs(v))}`;
+      const xTerms = ordered.map(q => {
+        if (q.freq === 0) return `(${formatNum(q.re)})`;
+        const angle = `2π·(${q.freq})t`;
+        return `(${formatNum(q.re)} cos(${angle}) ${signed(-q.im)} sin(${angle}))`;
+      });
+      const yTerms = ordered.map(q => {
+        if (q.freq === 0) return `(${formatNum(q.im)})`;
+        const angle = `2π·(${q.freq})t`;
+        return `(${formatNum(q.im)} cos(${angle}) ${signed(q.re)} sin(${angle}))`;
+      });
+      const compact = (arr) => arr.join(' + ') || '0';
+      return `FOURIER CURVE — READABLE HARMONIC FORM\nThis is like a polynomial made from repeating waves (sines and cosines), rather than powers such as t².\n\nx(t) = ${compact(xTerms)}\n\ny(t) = ${compact(yTerms)}\n\n0 ≤ t < 1\nEach bracket is one frequency. Negative frequencies are retained exactly. Terms shown: ${terms.length} of ${N} sampled frequencies.`;
+    }
+    if (format === 'parametric') {
+      const xTerms = terms.map(q => `(${formatNum(q.re)})cos(2π·${q.freq}t) - (${formatNum(q.im)})sin(2π·${q.freq}t)`);
+      const yTerms = terms.map(q => `(${formatNum(q.im)})cos(2π·${q.freq}t) + (${formatNum(q.re)})sin(2π·${q.freq}t)`);
+      return `x(t) = ${xTerms.join('\n       ')}\n\ny(t) = ${yTerms.join('\n       ')}\n\n0 ≤ t < 1; normalized Fourier parameter.`;
+    }
+    const rows = terms.map(q => `k=${q.freq}: Cₖ=${formatNum(q.re)} ${q.im < 0 ? '-' : '+'} ${formatNum(Math.abs(q.im))}i; |Cₖ|=${formatNum(q.amp)}; phase=${formatNum(q.phase)} rad`);
+    return `z(t) = Σ [ Cₖ · exp(i·2π·k·t) ]\nCₖ = aₖ + i·bₖ; t ∈ [0,1); ${terms.length} strongest terms from ${N} samples.\n\n${rows.join('\n')}`;
+  }
+  function updateEquationOutput() {
+    if (!equationOutput) return;
+    equationOutput.value = makeEquationText();
+    $('equationStatus').textContent = coeff.length ? `${activeFourierTerms().length} terms ready` : 'Waiting for pattern';
+    $('equationTermsOut').textContent = $('equationTerms').value;
+  }
+
+  function makeDesmosParametric() {
+    if (!coeff.length) return '';
+    const terms = activeFourierTerms();
+    const fmt = v => Number(v.toPrecision(9)).toString();
+    const joinSigned = (parts) => parts.length ? parts.join(' + ') : '0';
+    const xParts=[], yParts=[];
+    for (const q of terms) {
+      const k=q.freq;
+      const angle=k===0 ? '0' : `2*pi*(${k})*t`;
+      if (k===0) {
+        xParts.push(`(${fmt(q.re)})`);
+        yParts.push(`(${fmt(q.im)})`);
+      } else {
+        xParts.push(`(${fmt(q.re)})*cos(${angle})-(${fmt(q.im)})*sin(${angle})`);
+        yParts.push(`(${fmt(q.im)})*cos(${angle})+(${fmt(q.re)})*sin(${angle})`);
+      }
+    }
+    const xb=`(${joinSigned(xParts)})`, yb=`(${joinSigned(yParts)})`;
+    const deg=Number($('orientation').value)||0;
+    const rad=deg*Math.PI/180;
+    const c=fmt(Math.cos(rad)), s=fmt(Math.sin(rad));
+    const xr=deg===0?xb:`(${xb})*(${c})-(${yb})*(${s})`;
+    const yr=deg===0?yb:`(${xb})*(${s})+(${yb})*(${c})`;
+    return `(${xr},${yr}) {0<=t<=1}`;
+  }
+  $('copyDesmos').addEventListener('click', async () => {
+    const expression=makeDesmosParametric();
+    if (!expression) { $('equationStatus').textContent='Generate a pattern first'; return; }
+    try {
+      await navigator.clipboard.writeText(expression);
+      $('equationStatus').textContent='Desmos parametric expression copied';
+    } catch (_) {
+      equationOutput.value=expression;
+      equationOutput.focus(); equationOutput.select();
+      try { document.execCommand('copy'); $('equationStatus').textContent='Desmos expression copied'; }
+      catch (__) { $('equationStatus').textContent='Desmos expression shown — select and copy'; }
+    }
+  });
+
+  function downloadTextFile(filename, content, mime='text/plain') {
+    const blob = new Blob([content], {type:mime+';charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  $('copyEquation').addEventListener('click', async () => {
+    updateEquationOutput();
+    if (!equationOutput.value) return;
+    try { await navigator.clipboard.writeText(equationOutput.value); $('equationStatus').textContent='Copied'; }
+    catch (_) {
+      equationOutput.focus(); equationOutput.select();
+      try { document.execCommand('copy'); $('equationStatus').textContent='Copied'; }
+      catch (__) { $('equationStatus').textContent='Select text to copy'; }
+    }
+  });
+  $('downloadEquation').addEventListener('click', () => {
+    updateEquationOutput();
+    if (equationOutput.value) downloadTextFile('fourier-pattern-equation.txt',equationOutput.value);
+  });
+  $('downloadCoefficients').addEventListener('click', () => {
+    if (!coeff.length) return;
+    const rows=[['frequency','real','imaginary','amplitude','phase_radians']];
+    activeFourierTerms().forEach(q=>rows.push([q.freq,q.re,q.im,q.amp,q.phase]));
+    const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    downloadTextFile('fourier-pattern-coefficients.csv',csv,'text/csv');
+  });
+  $('equationTerms').addEventListener('input',updateEquationOutput);
+  $('equationFormat').addEventListener('change',updateEquationOutput);
+
+
+  // LIVE PATTERN-SYNCHRONIZED SYNTH
+  // The animation phase is the master clock. Every audio block reads the same
+  // normalized path parameter that the epicycle tip is currently tracing.
+  let audioCtx=null, audioProcessor=null, audioMaster=null, audioFilterNode=null, audioPanNode=null;
+  let audioPhase=0, audioLfoPhase=0, audioPhaseActive=false;
+  function patternValueAt(phase, source) {
+    const n=normalizedSamples.length;
+    if(!n) return 0;
+    const pos=((phase%1)+1)%1*n, i=Math.floor(pos), f=pos-i;
+    const a=normalizedSamples[i], b=normalizedSamples[(i+1)%n];
+    const pick=p=>source==='x'?p.x:source==='y'?p.y:source==='angle'?Math.atan2(p.y,p.x)/Math.PI:Math.hypot(p.x,p.y);
+    return pick(a)+(pick(b)-pick(a))*f;
+  }
+  function setAudioStatus(message){$('audioStatus').textContent=message;}
+  function updateAudioLabels(){
+    $('audioFrequencyOut').textContent=`${$('audioFrequency').value} Hz`;
+    $('audioPatternDepthOut').textContent=`${$('audioPatternDepth').value}%`;
+    $('audioLfoRateOut').textContent=`${Number($('audioLfoRate').value).toFixed(2)} Hz`;
+    $('audioLfoDepthOut').textContent=`${$('audioLfoDepth').value}%`;
+    $('audioVolumeOut').textContent=`${$('audioVolume').value}%`;
+    $('audioFilterOut').textContent=`${Number($('audioFilter').value).toLocaleString()} Hz`;
+    $('audioStereoOut').textContent=`${$('audioStereo').value}%`;
+  }
+  function updateAudioParameters(){
+    updateAudioLabels();
+    if(!audioCtx||!audioProcessor)return;
+    const now=audioCtx.currentTime;
+    audioMaster.gain.setTargetAtTime(Number($('audioVolume').value)/100,now,0.03);
+    audioFilterNode.frequency.setTargetAtTime(Number($('audioFilter').value),now,0.03);
+    if(audioPanNode.pan) audioPanNode.pan.setTargetAtTime(Number($('audioStereo').value)/100,now,0.05);
+  }
+  async function startPatternAudio(){
+    if(!normalizedSamples.length){setAudioStatus('Draw or load a pattern first');return;}
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){setAudioStatus('Web Audio is not supported in this browser');return;}
+    try{
+      if(audioProcessor) stopPatternAudio();
+      audioCtx=audioCtx||new AC();
+      await audioCtx.resume();
+      audioPhase=((time%1)+1)%1;
+      audioLfoPhase=0;
+      audioProcessor=audioCtx.createScriptProcessor(1024,0,1);
+      audioMaster=audioCtx.createGain();
+      audioFilterNode=audioCtx.createBiquadFilter();
+      audioPanNode=audioCtx.createStereoPanner?audioCtx.createStereoPanner():audioCtx.createGain();
+      audioFilterNode.type='lowpass';
+      audioProcessor.onaudioprocess=(event)=>{
+        const output=event.outputBuffer.getChannelData(0);
+        const sr=audioCtx.sampleRate;
+        const base=Number($('audioFrequency').value);
+        const patternDepth=Number($('audioPatternDepth').value)/100;
+        const lfoRate=Number($('audioLfoRate').value);
+        const lfoDepth=Number($('audioLfoDepth').value)/100;
+        const mode=$('audioLfoMode').value;
+        const source=$('audioWaveSource').value;
+        const speed=Math.max(0,Number($('speed').value));
+        const pathRate=paused?0:0.11*speed;
+        const maxOctaves=2.5*patternDepth;
+        let phase=audioPhase;
+        let carrierPhase=audioCarrierPhase;
+        for(let i=0;i<output.length;i++){
+          const v=Math.max(-1,Math.min(1,patternValueAt(phase,source)));
+          const lfo=Math.sin(audioLfoPhase*2*Math.PI);
+          const lfoPitch=(mode==='amp'?0:lfo*lfoDepth*12);
+          const patternSemitones=v*maxOctaves*12;
+          const freq=Math.max(20,Math.min(sr*0.42,base*Math.pow(2,(patternSemitones+lfoPitch)/12)));
+          carrierPhase+=2*Math.PI*freq/sr;
+          // The path coordinate controls both pitch contour and a gentle amplitude contour.
+          const pathAmp=0.72+0.22*v;
+          const lfoAmp=(mode==='pitch'?1:1+lfo*lfoDepth*0.45);
+          let sample=Math.sin(carrierPhase)*pathAmp*lfoAmp*0.72;
+          // Soft saturation keeps complex, fast-changing contours from clipping.
+          output[i]=sample/(1+Math.abs(sample)*0.18);
+          phase+=pathRate/sr;
+          if(phase>=1)phase-=1;
+          audioLfoPhase+=lfoRate/sr;
+          if(audioLfoPhase>=1)audioLfoPhase-=1;
+        }
+        audioCarrierPhase=carrierPhase%(2*Math.PI);
+        audioPhase=phase;
+      };
+      audioCarrierPhase=0;
+      audioProcessor.connect(audioFilterNode);
+      audioFilterNode.connect(audioMaster);
+      audioMaster.connect(audioPanNode);
+      audioPanNode.connect(audioCtx.destination);
+      updateAudioParameters();
+      audioPhaseActive=true;
+      $('startAudio').disabled=true;
+      $('stopAudio').disabled=false;
+      setAudioStatus('Live sync · following every path sample');
+    }catch(err){
+      console.error(err);
+      setAudioStatus(err.message||'Could not start synchronized audio');
+      stopPatternAudio();
+    }
+  }
+  let audioCarrierPhase=0;
+  function stopPatternAudio(){
+    try{if(audioProcessor){audioProcessor.onaudioprocess=null;audioProcessor.disconnect();}}catch(_){}
+    [audioMaster,audioFilterNode,audioPanNode].forEach(n=>{try{if(n)n.disconnect();}catch(_){}});
+    audioProcessor=null;audioMaster=null;audioFilterNode=null;audioPanNode=null;
+    audioPhaseActive=false;
+    $('startAudio').disabled=false;
+    $('stopAudio').disabled=true;
+    setAudioStatus('Audio stopped');
+  }
+  $('startAudio').addEventListener('click',startPatternAudio);
+  $('stopAudio').addEventListener('click',stopPatternAudio);
+  $('refreshAudioWave').addEventListener('click',()=>{
+    if(!normalizedSamples.length){setAudioStatus('Draw or load a pattern first');return;}
+    if(audioProcessor){audioPhase=((time%1)+1)%1;setAudioStatus('Live pattern data refreshed');}
+    else setAudioStatus('Pattern ready — press Start Audio');
+  });
+  $('audioWaveSource').addEventListener('change',()=>setAudioStatus(audioProcessor?'Live waveform source changed':'Pattern source selected'));
+  ['audioFrequency','audioPatternDepth','audioLfoRate','audioLfoDepth','audioLfoMode','audioVolume','audioFilter','audioStereo'].forEach(id=>{
+    $(id).addEventListener('input',updateAudioParameters);
+    $(id).addEventListener('change',updateAudioParameters);
+  });
+  updateAudioLabels();
+
+
+  // Sound presets: starting points; all parameters remain user-adjustable.
+  const soundPresets = {
+    ambient:{source:'y',frequency:174,pattern:32,lfoRate:0.18,lfoDepth:18,lfoMode:'both',volume:16,filter:4200,stereo:62},
+    glass:{source:'angle',frequency:440,pattern:82,lfoRate:1.7,lfoDepth:12,lfoMode:'pitch',volume:13,filter:14500,stereo:24},
+    drone:{source:'radius',frequency:82,pattern:24,lfoRate:0.09,lfoDepth:8,lfoMode:'pitch',volume:24,filter:1800,stereo:12},
+    pulse:{source:'x',frequency:220,pattern:90,lfoRate:3.2,lfoDepth:65,lfoMode:'amp',volume:18,filter:6500,stereo:48},
+    lead:{source:'x',frequency:330,pattern:68,lfoRate:0.55,lfoDepth:22,lfoMode:'pitch',volume:14,filter:11000,stereo:18},
+    organic:{source:'y',frequency:196,pattern:56,lfoRate:0.42,lfoDepth:42,lfoMode:'both',volume:17,filter:7800,stereo:78}
+  };
+  const audioSettingIds=['audioWaveSource','audioFrequency','audioPatternDepth','audioLfoRate','audioLfoDepth','audioLfoMode','audioVolume','audioFilter','audioStereo'];
+  const AUDIO_STORAGE_KEY='fourierLabPro.audioSettings.v1';
+  let restoringAudioSettings=false;
+  function readAudioSettings(){
+    const values={}; audioSettingIds.forEach(id=>values[id]=$(id).value);
+    values.preset=$('audioPreset').value; return values;
+  }
+  function storageStatus(message){$('audioStorageStatus').textContent=message;}
+  function persistAudioSettings(){
+    if(restoringAudioSettings||!$('rememberAudioSettings').checked)return;
+    try{localStorage.setItem(AUDIO_STORAGE_KEY,JSON.stringify(readAudioSettings()));storageStatus('Saved in this browser');}
+    catch(_){storageStatus('Browser storage unavailable');}
+  }
+  function applyAudioSettings(values){
+    if(!values||typeof values!=='object')return;
+    restoringAudioSettings=true;
+    audioSettingIds.forEach(id=>{
+      if(!Object.prototype.hasOwnProperty.call(values,id)) return;
+      const el=$(id), v=String(values[id]);
+      if(el.tagName==='SELECT') {
+        if(Array.from(el.options).some(o=>o.value===v)) el.value=v;
+      } else if(el.type==='range' || el.type==='number') {
+        const n=Number(v);
+        if(Number.isFinite(n)) {
+          const min=Number(el.min), max=Number(el.max);
+          el.value=String(Math.max(Number.isFinite(min)?min:-Infinity,Math.min(Number.isFinite(max)?max:Infinity,n)));
+        }
+      }
+    });
+    if(values.preset&&[...$('audioPreset').options].some(o=>o.value===values.preset))$('audioPreset').value=values.preset;
+    restoringAudioSettings=false; updateAudioParameters();
+  }
+  function applySelectedSoundPreset(){
+    const key=$('audioPreset').value,p=soundPresets[key];
+    if(!p)return;
+    applyAudioSettings({
+      audioWaveSource:p.source,audioFrequency:p.frequency,audioPatternDepth:p.pattern,
+      audioLfoRate:p.lfoRate,audioLfoDepth:p.lfoDepth,audioLfoMode:p.lfoMode,
+      audioVolume:p.volume,audioFilter:p.filter,audioStereo:p.stereo,preset:key
+    });
+    $('audioHint').textContent=`${$('audioPreset').selectedOptions[0].text} loaded. Adjust any slider to customize it.`;
+    persistAudioSettings();
+    setAudioStatus(audioProcessor?'Preset applied · live sound updated':'Preset ready');
+  }
+  $('applyAudioPreset').addEventListener('click',()=>{
+    try { applySelectedSoundPreset(); }
+    catch(err) { console.error('Sound preset error:',err); setAudioStatus('Preset error: '+(err.message||'unknown')); }
+  });
+  $('audioPreset').addEventListener('change',()=>{
+    if($('audioPreset').value==='custom') {
+      $('audioHint').textContent='Custom sound: your current control values are active.';
+      persistAudioSettings();
+    } else {
+      $('audioHint').textContent='Preset selected. Press Apply Sound Preset to load its controls.';
+    }
+  });
+  audioSettingIds.forEach(id=>{
+    $(id).addEventListener('input',()=>{
+      if(!restoringAudioSettings){$('audioPreset').value='custom';persistAudioSettings();}
+    });
+    $(id).addEventListener('change',persistAudioSettings);
+  });
+  $('rememberAudioSettings').addEventListener('change',()=>{
+    if($('rememberAudioSettings').checked){
+      try{localStorage.setItem(AUDIO_STORAGE_KEY,JSON.stringify(readAudioSettings()));storageStatus('Saving enabled · settings saved');}
+      catch(_){$('rememberAudioSettings').checked=false;storageStatus('Could not access browser storage');}
+    }else{
+      try{localStorage.removeItem(AUDIO_STORAGE_KEY);}catch(_){}
+      storageStatus('Browser saving is off · saved settings cleared');
+    }
+  });
+  $('clearAudioSettings').addEventListener('click',()=>{
+    try{localStorage.removeItem(AUDIO_STORAGE_KEY);}catch(_){}
+    $('rememberAudioSettings').checked=false;storageStatus('Saved settings cleared · saving is off');
+  });
+  try {
+    const saved=localStorage.getItem(AUDIO_STORAGE_KEY);
+    if(saved) {
+      const parsed=JSON.parse(saved);
+      if(parsed && typeof parsed==='object') {
+        $('rememberAudioSettings').checked=true;
+        applyAudioSettings(parsed);
+        storageStatus('Restored from this browser');
+      } else storageStatus('Saved settings were invalid');
+    }
+  } catch(err) {
+    console.warn('Could not restore saved audio settings:',err);
+    storageStatus('Browser storage unavailable');
+  }
+
+  // About dialog
+  const aboutDialog=$('aboutDialog');
+  function openAbout(){aboutDialog.hidden=false;aboutDialog.style.display='flex';$('aboutClose').focus();}
+  function closeAbout(){aboutDialog.style.display='none';aboutDialog.hidden=true;$('aboutOpen').focus();}
+  $('aboutOpen').addEventListener('click',openAbout);
+  $('aboutClose').addEventListener('click',closeAbout);
+  aboutDialog.addEventListener('click',ev=>{if(ev.target===aboutDialog)closeAbout();});
+  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!aboutDialog.hidden)closeAbout();});
+
+  // ===========================================================================
+  // 6.5 SELF-CONTAINED PURE-JS GIF89a ENCODER (LZW + 256 PALETTE + TRANSPARENCY)
+  // ============================================================================
+  function createGif89aEncoder(width, height, delayCs, transparentMode) {
+    const bytes = [];
+    const writeByte = b => bytes.push(b & 0xff);
+    const writeShort = s => { bytes.push(s & 0xff, (s >> 8) & 0xff); };
+    const writeStr = str => { for (let i = 0; i < str.length; i++) bytes.push(str.charCodeAt(i)); };
+
+    // Build a rich 256-color palette tailored for dark background, cyan gears, and full rainbow spectrum
+    // Index 0 = Transparent key, Index 1 = Studio dark background (#0a111f),
+    // Indices 2..37 = Grayscale/Slate ramp, Indices 38..253 = 6x6x6 RGB cube
+    const palette = new Uint8Array(256 * 3);
+    palette[0] = 0; palette[1] = 255; palette[2] = 0; // 0: transparent key
+    palette[3] = 10; palette[4] = 17; palette[5] = 31; // 1: studio dark bg
+    for (let i = 0; i < 36; i++) {
+      const idx = (2 + i) * 3;
+      const v = Math.round((i / 35) * 255);
+      palette[idx] = Math.round(v * 0.82);
+      palette[idx + 1] = Math.round(v * 0.90);
+      palette[idx + 2] = v;
+    }
+    let pIdx = 38;
+    for (let r = 0; r < 6; r++) {
+      for (let g = 0; g < 6; g++) {
+        for (let b = 0; b < 6; b++) {
+          const idx = pIdx * 3;
+          palette[idx] = Math.round((r / 5) * 255);
+          palette[idx + 1] = Math.round((g / 5) * 255);
+          palette[idx + 2] = Math.round((b / 5) * 255);
+          pIdx++;
+        }
+      }
+    }
+
+    // Header & Logical Screen Descriptor
+    writeStr('GIF89a');
+    writeShort(width);
+    writeShort(height);
+    writeByte(0xf7); // Global color table flag (1), 8-bit color res (7), 256 entries (7)
+    writeByte(transparentMode ? 0 : 1);
+    writeByte(0);
+    for (let i = 0; i < palette.length; i++) writeByte(palette[i]);
+
+    // Netscape 2.0 Infinite Loop Application Extension
+    writeByte(0x21); writeByte(0xff); writeByte(0x0b);
+    writeStr('NETSCAPE2.0');
+    writeByte(0x03); writeByte(0x01); writeShort(0); writeByte(0x00);
+
+    // LZW Encoder for 8-bit indexed pixel array
+    function lzwEncode(indexStream) {
+      const minCodeSize = 8;
+      const out = [minCodeSize];
+      const clearCode = 1 << minCodeSize;
+      const eoiCode = clearCode + 1;
+      let codeSize = minCodeSize + 1;
+      let nextCode = eoiCode + 1;
+
+      // Flat hash table for (prefix << 8 | suffix) -> code
+      const dict = new Int32Array(4096 * 256);
+      dict.fill(-1);
+
+      let bitBuf = 0, bitCount = 0;
+      const subBlock = [];
+      const emitSubBlock = () => {
+        if (subBlock.length) {
+          out.push(subBlock.length, ...subBlock);
+          subBlock.length = 0;
+        }
+      };
+      const writeCode = code => {
+        bitBuf |= (code << bitCount);
+        bitCount += codeSize;
+        while (bitCount >= 8) {
+          subBlock.push(bitBuf & 0xff);
+          if (subBlock.length === 255) emitSubBlock();
+          bitBuf >>= 8;
+          bitCount -= 8;
+        }
+      };
+
+      writeCode(clearCode);
+      let prefix = indexStream[0];
+
+      for (let i = 1; i < indexStream.length; i++) {
+        const k = indexStream[i];
+        const key = (prefix << 8) | k;
+        const hit = dict[key];
+        if (hit !== -1) {
+          prefix = hit;
+        } else {
+          writeCode(prefix);
+          if (nextCode < 4096) {
+            dict[key] = nextCode++;
+            if (nextCode > (1 << codeSize) && codeSize < 12) {
+              codeSize++;
+            }
+          } else {
+            writeCode(clearCode);
+            dict.fill(-1);
+            codeSize = minCodeSize + 1;
+            nextCode = eoiCode + 1;
+          }
+          prefix = k;
+        }
+      }
+      writeCode(prefix);
+      writeCode(eoiCode);
+      if (bitCount > 0) {
+        subBlock.push(bitBuf & 0xff);
+      }
+      emitSubBlock();
+      out.push(0x00); // Block terminator
+      return out;
+    }
+
+    return {
+      addFrame(rgbaData) {
+        // Graphic Control Extension
+        writeByte(0x21); writeByte(0xf9); writeByte(0x04);
+        // Disposal method 2 (restore to bg/transparent) when transparentMode is true, else 1 (do not dispose)
+        writeByte(transparentMode ? 0x09 : 0x04);
+        writeShort(delayCs);
+        writeByte(0x00); // Transparent color index = 0
+        writeByte(0x00);
+
+        // Image Descriptor
+        writeByte(0x2c);
+        writeShort(0); writeShort(0);
+        writeShort(width); writeShort(height);
+        writeByte(0x00);
+
+        const nPix = width * height;
+        const indexed = new Uint8Array(nPix);
+        for (let i = 0; i < nPix; i++) {
+          const off = i * 4;
+          const a = rgbaData[off + 3];
+          if (transparentMode && a < 90) {
+            indexed[i] = 0;
+            continue;
+          }
+          const r = rgbaData[off], g = rgbaData[off + 1], b = rgbaData[off + 2];
+          if (!transparentMode && r < 18 && g < 26 && b < 42) {
+            indexed[i] = 1; // crisp studio dark background
+            continue;
+          }
+          const r6 = Math.round((r / 255) * 5);
+          const g6 = Math.round((g / 255) * 5);
+          const b6 = Math.round((b / 255) * 5);
+          indexed[i] = 38 + (r6 * 36 + g6 * 6 + b6);
+        }
+
+        const compressed = lzwEncode(indexed);
+        for (let i = 0; i < compressed.length; i++) writeByte(compressed[i]);
+      },
+      finish() {
+        writeByte(0x3b); // GIF Trailer
+        return new Blob([new Uint8Array(bytes)], { type: 'image/gif' });
+      }
+    };
+  }
+
+  let isExportingGif = false;
+  $('exportGifBtn').addEventListener('click', async () => {
+    if (isExportingGif || !coeff.length) return;
+    isExportingGif = true;
+    const btn = $('exportGifBtn');
+    const progWrap = $('gifProgressWrap');
+    const progBar = $('gifProgressBar');
+    const status = $('gifStatus');
+
+    btn.disabled = true;
+    progWrap.classList.remove('hidden');
+    progBar.style.width = '0%';
+
+    try {
+      const [gw, gh] = $('gifRes').value.split('x').map(Number);
+      const [fps, sec] = $('gifTiming').value.split('_').map(Number);
+      const totalFrames = fps * sec;
+      const delayCs = Math.max(2, Math.round(100 / fps));
+      const onlyPattern = $('gifMode').value === 'pattern';
+      const transparentGif = $('gifBg').value === 'transparent';
+
+      const off = document.createElement('canvas');
+      off.width = gw;
+      off.height = gh;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+
+      const encoder = createGif89aEncoder(gw, gh, delayCs, transparentGif);
+      const count = Math.min(Number($('terms').value), coeff.length);
+      const simTrace = [];
+
+      for (let f = 0; f < totalFrames; f++) {
+        const t0 = f / totalFrames;
+        const t1 = (f + 1) / totalFrames;
+        const subSteps = Math.max(2, Math.ceil((1 / totalFrames) * N));
+        for (let s = 1; s <= subSteps; s++) {
+          const u = t0 + ((t1 - t0) * s) / subSteps;
+          simTrace.push(evaluateEpicyclesAt(u, count));
+        }
+
+        renderSceneToContext(octx, gw, gh, t1, simTrace, {
+          transparent: transparentGif,
+          drawBgFill: !transparentGif,
+          showEpicycles: !onlyPattern,
+          showGridLines: !transparentGif
+        });
+
+        const frameData = octx.getImageData(0, 0, gw, gh).data;
+        encoder.addFrame(frameData);
+
+        const pct = Math.round(((f + 1) / totalFrames) * 100);
+        progBar.style.width = `${pct}%`;
+        status.textContent = `Encoding GIF frame ${f + 1} / ${totalFrames} (${pct}%)...`;
+
+        if (f % 3 === 0) {
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+
+      const blob = encoder.finish();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fourier_epicycles_${gw}x${gh}_${onlyPattern ? 'pattern' : 'gears'}.gif`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      const kb = Math.round(blob.size / 1024);
+      status.textContent = `✔ Exported ${totalFrames}-frame GIF (${kb} KB) — download started!`;
+    } catch (err) {
+      status.textContent = `GIF Export error: ${err.message}`;
+    } finally {
+      isExportingGif = false;
+      btn.disabled = false;
+      setTimeout(() => progWrap.classList.add('hidden'), 1800);
+    }
+  });
+
+
+
+  $('wallpaperStrength').addEventListener('input', () => {
+    $('wallpaperStrengthOut').textContent = `${$('wallpaperStrength').value}%`;
+  });
+
+  // Live graph orientation control
+  $('orientation').addEventListener('input', () => {
+    $('orientationOut').textContent = `${$('orientation').value}°`;  });
+
+  // --------------------------------------------------------------------------
+
+  // Export a standalone, self-contained HTML animation of the current Fourier result.
+  $('exportHtmlBtn').addEventListener('click', () => {
+    if (!coeff.length) {
+      $('htmlExportStatus').textContent = 'Generate a Fourier pattern first.';
+      return;
+    }
+    const count = Math.max(1, Math.min(Number($('terms').value), coeff.length));
+    const terms = coeff.slice(0, count).map(q => ({
+      freq: q.freq, amp: q.amp, phase: q.phase
+    }));
+    const orientation = Number($('orientation').value) || 0;
+    const duration = Math.max(2, Math.min(60, Number($('videoSeconds').value) || 10));
+    const payload = JSON.stringify({ terms, orientation, duration, width: 1920, height: 1080 });
+    const standalone = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fourier Lab — Exported Animation</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d18;color:#dbeafe;font:14px system-ui}
+canvas{display:block;width:100%;height:100%;}#hud{position:fixed;left:14px;top:12px;padding:8px 12px;border:1px solid #334155;border-radius:10px;background:#0b1220cc}
+</style></head><body><canvas id="c"></canvas><div id="hud">Fourier Lab · <span id="angle"></span></div>
+<script>
+const DATA=${payload};
+const c=document.getElementById('c'),x=c.getContext('2d');
+let start=performance.now();
+function resize(){const d=Math.min(devicePixelRatio||1,2);c.width=Math.floor(innerWidth*d);c.height=Math.floor(innerHeight*d);}
+addEventListener('resize',resize);resize();
+function point(t){let re=0,im=0;for(const q of DATA.terms){const a=2*Math.PI*q.freq*t+q.phase;re+=q.amp*Math.cos(a);im+=q.amp*Math.sin(a);}return [re,im];}
+function frame(now){
+ const t=((now-start)/1000/DATA.duration)%1,w=c.width,h=c.height,scale=Math.min(w,h)*.38;
+ x.clearRect(0,0,w,h);const g=x.createRadialGradient(w/2,h/2,10,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#101d31');g.addColorStop(1,'#080d18');x.fillStyle=g;x.fillRect(0,0,w,h);
+ x.save();x.translate(w/2,h/2);x.rotate(DATA.orientation*Math.PI/180);
+ x.beginPath();for(let i=0;i<=1200;i++){const p=point(i/1200),px=p[0]*scale,py=-p[1]*scale;i?x.lineTo(px,py):x.moveTo(px,py);}x.closePath();x.strokeStyle='#ff6fae';x.lineWidth=Math.max(2,w/1000);x.shadowColor='#ff6fae';x.shadowBlur=12;x.stroke();x.shadowBlur=0;
+ let re=0,im=0,px=0,py=0;
+ for(const q of DATA.terms){const a=2*Math.PI*q.freq*t+q.phase;re+=q.amp*Math.cos(a);im+=q.amp*Math.sin(a);const nx=re*scale,ny=-im*scale,r=q.amp*scale;
+ x.beginPath();x.arc(px,py,r,0,Math.PI*2);x.strokeStyle='rgba(83,229,255,.23)';x.lineWidth=1;x.stroke();
+ x.beginPath();x.moveTo(px,py);x.lineTo(nx,ny);x.strokeStyle='rgba(83,229,255,.85)';x.lineWidth=1.4;x.stroke();px=nx;py=ny;}
+ x.beginPath();x.arc(px,py,4,0,Math.PI*2);x.fillStyle='#e9d5ff';x.fill();
+ x.restore();document.getElementById('angle').textContent=DATA.orientation+'° orientation';requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+<\/script></body></html>`;
+    const blob = new Blob([standalone], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fourier_lab_animation.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    $('htmlExportStatus').textContent = `Standalone HTML exported with ${count} harmonics and ${orientation}° orientation.`;
+  });
+
+  // HIGH-RESOLUTION VIDEO EXPORT (MP4 when browser encoder supports it,
+  // otherwise WebM). Renders through the same scene renderer as the live view.
+  // --------------------------------------------------------------------------
+  let isExportingVideo = false;
+  $('exportVideoBtn').addEventListener('click', async () => {
+    if (isExportingVideo || !coeff.length) {
+      if (!coeff.length) $('videoStatus').textContent = 'Draw, upload, or select a pattern and generate Fourier coefficients first.';
+      return;
+    }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+      $('videoStatus').textContent = 'This browser does not support canvas video recording. Try current desktop Chrome or Edge.';
+      return;
+    }
+
+    isExportingVideo = true;
+    const btn = $('exportVideoBtn');
+    const wrap = $('videoProgressWrap');
+    const bar = $('videoProgressBar');
+    const status = $('videoStatus');
+    btn.disabled = true;
+    wrap.classList.remove('hidden');
+    bar.style.width = '0%';
+
+    let stream = null, recorder = null;
+    const chunks = [];
+    try {
+      const [vw, vh] = $('videoRes').value.split('x').map(Number);
+      const fps = Number($('videoFps').value);
+      const seconds = Number($('videoSeconds').value);
+      const totalFrames = fps * seconds;
+      const patternOnly = $('videoLayer').value === 'pattern';
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = vw;
+      exportCanvas.height = vh;
+      const exportCtx = exportCanvas.getContext('2d', { alpha: true });
+      if (!exportCtx) throw new Error('Could not create the high-resolution rendering surface.');
+
+      const mimeCandidates = [
+        'video/mp4;codecs="avc1.42E01E"',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+      ];
+      const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t));
+      if (!mimeType) throw new Error('No supported MP4 or WebM recording codec was found in this browser.');
+
+      stream = exportCanvas.captureStream(fps);
+      recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: vw >= 3840 ? 24000000 : 9000000
+      });
+      recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+
+      const stopped = new Promise((resolve, reject) => {
+        recorder.onstop = resolve;
+        recorder.onerror = e => reject(e.error || new Error('Video encoder failed.'));
+      });
+      recorder.start(1000);
+
+      const count = Math.min(Number($('terms').value), coeff.length);
+      const speedNow = Number($('speed').value);
+      const waitMs = 1000 / fps;
+      status.textContent = `Rendering ${vw}×${vh} at ${fps} FPS…`;
+
+      // Exactly one parameter-space revolution: first and last frame meet at the seam.
+      for (let f = 0; f < totalFrames; f++) {
+        const t = f / totalFrames;
+        const currentTrace = [];
+        const endIndex = Math.max(1, Math.floor(t * N));
+        const stride = Math.max(1, Math.floor(N / 1800));
+        for (let j = 0; j <= endIndex; j += stride) {
+          currentTrace.push(evaluateEpicyclesAt(j / N, count));
+        }
+        if (!currentTrace.length || t === 0) currentTrace.push(evaluateEpicyclesAt(t, count));
+
+        renderSceneToContext(exportCtx, vw, vh, t, currentTrace, {
+          transparent: false,
+          drawBgFill: true,
+          showEpicycles: !patternOnly,
+          showGridLines: true
+        });
+
+        // Give the browser a frame interval to capture this canvas image.
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const pct = Math.round(((f + 1) / totalFrames) * 100);
+        bar.style.width = `${pct}%`;
+        status.textContent = `Rendering video frame ${f + 1}/${totalFrames} (${pct}%)…`;
+      }
+
+      recorder.stop();
+      await stopped;
+      const isMp4 = mimeType.startsWith('video/mp4');
+      const blob = new Blob(chunks, { type: mimeType });
+      if (!blob.size) throw new Error('The browser returned an empty video file.');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fourier_screensaver_${vw}x${vh}_${fps}fps.${isMp4 ? 'mp4' : 'webm'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+      status.textContent = `✔ Exported ${isMp4 ? 'MP4' : 'WebM'} · ${vw}×${vh} · ${fps} FPS · ${(blob.size / 1048576).toFixed(1)} MB.`;
+    } catch (err) {
+      try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
+      status.textContent = `Video export error: ${err.message}`;
+    } finally {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      isExportingVideo = false;
+      btn.disabled = false;
+      setTimeout(() => wrap.classList.add('hidden'), 2200);
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // COMPLETE CONTROL WIRING
+  // The preset selector and source-mode selector were present in the UI but
+  // had no change handlers in v8. This made the heart remain loaded when the
+  // user selected another preset or changed input mode.
+  // --------------------------------------------------------------------------
+  function setSourcePanels(mode) {
+    $('presetBox').classList.toggle('hidden', mode !== 'preset');
+    $('imageBox').classList.toggle('hidden', mode !== 'image');
+    $('textBox').classList.toggle('hidden', mode !== 'text');
+    $('activeSourceBadge').textContent =
+      mode === 'preset' ? 'Preset Curve' :
+      mode === 'image' ? 'Image / Signature' : 'Typography';
+  }
+
+  $('curveFamily').addEventListener('change', () => {
+    try {
+      updateCurveFamilyUI();
+      $('source').value = 'preset';
+      setSourcePanels('preset');
+      loadPreset();
+      $('imageStatus').textContent = 'Curve library selection generated and transformed by the Fourier engine.';
+    } catch (e) { $('imageStatus').textContent = `Curve error: ${e.message}`; }
+  });
+
+  $('curvePattern').addEventListener('change', () => {
+    try {
+      $('source').value = 'preset';
+      setSourcePanels('preset');
+      loadPreset();
+      $('imageStatus').textContent = 'Advanced curve rebuilt.';
+    } catch (e) { $('imageStatus').textContent = `Curve error: ${e.message}`; }
+  });
+
+  $('shape').addEventListener('change', () => {
+    try {
+      $('curveFamily').value = 'classic';
+      updateCurveFamilyUI();
+      $('source').value = 'preset';
+      setSourcePanels('preset');
+      loadPreset();
+      $('imageStatus').textContent = 'Classic preset curve rebuilt with the selected shape.';
+    } catch (e) {
+      $('imageStatus').textContent = `Preset error: ${e.message}`;
+    }
+  });
+
+  updateCurveFamilyUI();
+
+  $('source').addEventListener('change', () => {
+    const mode = $('source').value;
+    setSourcePanels(mode);
+    if (mode === 'preset') {
+      loadPreset();
+    } else if (mode === 'image') {
+      currentSourceMode = 'image';
+      if (imageBitmap) {
+        try { runUploadedImageExtraction(); }
+        catch (e) { $('imageStatus').textContent = e.message; }
+      } else {
+        $('imageStatus').textContent = 'Draw a pattern in the white area, then tap “Generate Fourier from Drawing”. Each stroke is captured as a vector path.';
+      }
+    } else {
+      currentSourceMode = 'text';
+      $('textStatus').textContent = 'Edit the text and press Convert Text into FFT.';
+    }
+  });
+
+  // Make all image extraction selectors respond consistently on desktop/mobile.
+  ['extractMode', 'invert', 'threshMode', 'morphHeal'].forEach(id => {
+    $(id).addEventListener('change', () => {
+      if ($('source').value === 'image' && imageBitmap) {
+        try { runUploadedImageExtraction(); }
+        catch (e) { $('imageStatus').textContent = e.message; }
+      }
+    });
+  });
+
+  // Timeline scrubbing reconstructs the visible ink at the selected time,
+  // rather than merely moving the slider label.
+  $('scrubber').addEventListener('input', () => {
+    const t = Math.max(0, Math.min(1, Number($('scrubber').value)));
+    time = t;
+    paused = true;
+    oneShot = false;
+    $('toggle').textContent = '▶ Play';
+    trace = [];
+    const count = Math.min(Number($('terms').value), coeff.length);
+    if (coeff.length) {
+      const steps = Math.max(1, Math.ceil(t * N));
+      for (let i = 0; i <= steps; i++) {
+        const u = t * i / steps;
+        trace.push(evaluateEpicyclesAt(u, count));
+      }
+    }
+    $('timeLabel').textContent = `T = ${(t * 100).toFixed(1)}%`;
+    $('hudCycle').textContent = `${Math.round(t * 100)}%`;
+  });
+
+  // Keep visible panel and badge in sync with the active source at startup.
+  setSourcePanels($('source').value);
+
+  // Re-evaluate trace live when user drags the Harmonics slider while paused or playing
+  $('terms').addEventListener('input', () => {
+    const count = Math.min(Number($('terms').value), coeff.length);
+    $('equationTerms').value = Math.min(count, Number($('equationTerms').max));
+    updateEquationOutput();
+    updateStatsUI();
+    $('equationTermsOut').textContent = $('equationTerms').value;
+    if (trace.length > 1) {
+      const currentT = time || 1;
+      const len = trace.length;
+      for (let i = 0; i < len; i++) {
+        trace[i] = evaluateEpicyclesAt(trace[i].t ?? (i / len) * currentT, count);
+      }
+    }
+  });
+
+  $('fftSize').addEventListener('change', () => {
+    rebuildFFT(currentSourceMode === 'preset');
+  });
+
+  $('smoothPasses').addEventListener('input', () => {
+    const v = Number($('smoothPasses').value);
+    $('smoothOut').textContent = `${v} pass${v === 1 ? '' : 'es'}`;
+    rebuildFFT(currentSourceMode === 'preset');
+  });
+
+  $('closeLoop').addEventListener('change', () => {
+    rebuildFFT(currentSourceMode === 'preset');
+  });
+
+  $('threshold').addEventListener('input', () => {
+    $('thresholdOut').textContent = $('threshold').value;
+  });
+
+  $('spurPrune').addEventListener('input', () => {
+    $('spurOut').textContent = `${$('spurPrune').value} px`;
+  });
+
+  $('speed').addEventListener('input', () => {
+    $('speedOut').textContent = Number($('speed').value).toFixed(1) + '×';
+  });
+
+  $('scale').addEventListener('input', () => {
+    $('scaleOut').textContent = $('scale').value + '%';
+  });
+
+  $('circleOpacity').addEventListener('input', () => {
+    $('circleOpacityOut').textContent = $('circleOpacity').value + '%';
+  });
+
+  $('transparentBg').addEventListener('change', () => {
+    canvas.parentElement.classList.toggle('checkerboard', $('transparentBg').checked);
+    if ($('transparentBg').checked) $('gifBg').value = 'transparent';
+  });
+
+
+  $('minComponent').addEventListener('input', () => {
+    $('minComponentOut').textContent = `${$('minComponent').value} px`;
+    if ($('source').value === 'image' && imageBitmap) {
+      try { runUploadedImageExtraction(); } catch (e) { $('imageStatus').textContent = e.message; }
+    }
+  });
+  $('trackWindow').addEventListener('input', () => {
+    $('trackWindowOut').textContent = `${$('trackWindow').value} pts`;
+    const limit=Number($('trackWindow').value);
+    if(trace.length>limit) trace=trace.slice(-limit);
+  });
+  for (const id of ['threeDYaw','threeDPitch','threeDDepth']) {
+    $(id).addEventListener('input', () => {
+      $(id + 'Out').textContent = id === 'threeDDepth' ? `${$(id).value}%` : `${$(id).value}°`;
+      if (id === 'threeDDepth') threePathKey = '';
+      else if (id === 'threeDYaw') threeSpherical.theta = Number($(id).value) * Math.PI / 180;
+      else threeSpherical.phi = Math.max(0.12, Math.min(Math.PI - 0.12, Math.PI / 2 - Number($(id).value) * Math.PI / 180));
+      updateThreeCamera();
+    });
+  }
+  $('threeDReset').addEventListener('click', () => {
+    threeSpherical = { theta: 0.62, phi: 1.18, radius: 7.2 };
+    $('threeDYaw').value = 35;
+    $('threeDPitch').value = 25;
+    $('threeDYawOut').textContent = '35°';
+    $('threeDPitchOut').textContent = '25°';
+    updateThreeCamera();
+  });
+  $('threeDMode').addEventListener('change', () => {
+    threePathKey = '';
+    if (threeRenderer) document.querySelector('.canvas-wrap').classList.toggle('three-active', threeModeActive());
+    $('imageStatus').textContent = $('threeDMode').value === 'off'
+      ? 'Returned to the standard 2D Fourier renderer.'
+      : `Three.js WebGL 3D enabled: ${$('threeDMode').selectedOptions[0].text}. Drag to orbit and scroll to zoom.`;
+  });
+
+  $('plotMode').addEventListener('change', drawPlots);
+  $('showTrackGrid').addEventListener('change', drawPlots);
+  $('showTracker').addEventListener('change', () => {});
+  $('toggle').addEventListener('click', () => {
+    paused = !paused;
+    $('toggle').textContent = paused ? '▶ Play' : 'Ⅱ Pause';
+  });
+
+  $('once').addEventListener('click', () => {
+    time = 0;
+    trace = [];
+    repeatIndex = 0;
+    oneShot = true;
+    paused = false;
+    $('toggle').textContent = 'Ⅱ Pause';
+  });
+
+  $('reset').addEventListener('click', () => {
+    time = 0;
+    trace = [];
+    repeatIndex = 0;
+    oneShot = false;
+    paused = false;
+    $('toggle').textContent = 'Ⅱ Pause';
+  });
+
+  $('wash').addEventListener('click', () => {
+    trace = [];
+  });
+
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(resize).observe(canvas.parentElement);
+  } else {
+    window.addEventListener('resize', resize);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    try { stopPatternAudio(); if (audioCtx) audioCtx.close(); } catch (_) {}
+  });
+  resize();
+  $('speedOut').textContent = Number($('speed').value).toFixed(1) + '×';
+  $('scaleOut').textContent = $('scale').value + '%';
+  $('termsOut').textContent = $('terms').value;
+  $('thresholdOut').textContent = $('threshold').value;
+  $('morphOut').textContent = `${$('morphHeal').value} px`;
+  $('spurOut').textContent = `${$('spurPrune').value} px`;
+  $('smoothOut').textContent = `${$('smoothPasses').value} pass`;
+  $('circleOpacityOut').textContent = $('circleOpacity').value + '%';
+  $('minComponentOut').textContent = `${$('minComponent').value} px`;
+  $('trackWindowOut').textContent = `${$('trackWindow').value} pts`;
+  $('equationTermsOut').textContent = $('equationTerms').value;
+  loadPreset();
+  updateEquationOutput();
+  requestAnimationFrame(frame);
+})();
+</script>
 
 </body>
 </html>
