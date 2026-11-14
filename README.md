@@ -41,3 +41,9 @@ The repository includes a Pages deployment workflow. To enable it, open **Settin
 ## Current status
 
 This is Release Candidate 1. Tested by Hartwinder Singh. Review [QA_REPORT.md](QA_REPORT.md) for the QA snapshot.
+
+## Contributing
+
+Bug reports, feature ideas, documentation improvements and code contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request.
+
+For project enquiries, open a GitHub issue or contact **Hartwinder Singh** at [drhartwinder@gmail.com](mailto:drhartwinder@gmail.com). If you have not received a response to an issue or pull request after 7 days, you may follow up by email and include its GitHub link.
